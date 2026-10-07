@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Feld">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="site.webmanifest">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<title>Feld</title>
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #161616;
+  --surface-2: #1f1f1f;
+  --surface-3: #262626;
+  --border: #2a2a2a;
+  --text: #ededed;
+  --text-dim: #8a8a8a;
+  --text-dimmer: #5f5f5f;
+  --accent: #60a5fa;
+  --accent-dim: #3b6ea8;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --diamond: #c084fc;
+  --focus: #60a5fa;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding-top: env(safe-area-inset-top);
+}
+a { color: inherit; }
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Header ---------- */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.header-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.search-wrap {
+  flex: 1 1 200px;
+  min-width: 120px;
+  position: relative;
+}
+.search-wrap input[type="search"] {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px 7px 30px;
+  color: var(--text);
+}
+.search-wrap input[type="search"]::placeholder { color: var(--text-dimmer); }
+.search-wrap svg {
+  position: absolute;
+  left: 9px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  stroke: var(--text-dim);
+  pointer-events: none;
+}
+.search-wrap input[type="search"]::-webkit-search-cancel-button { display: none; }
+.search-clear {
+  position: absolute;
+  right: 4px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  color: var(--text-dim);
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: none;
+  font-size: 16px;
+  line-height: 1;
+}
+.search-wrap.has-value .search-clear { display: block; }
+.search-clear:hover { background: var(--surface-3); color: var(--text); }
+
+.icon-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.sync-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-dimmer);
+}
+.sync-dot.synced { background: #4ade80; }
+.sync-dot.syncing { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+.sync-dot.error { background: var(--danger); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pulse { 50% { opacity: 0.3; } }
+}
+
+.btn-new {
+  background: var(--accent);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-new:hover { filter: brightness(1.08); }
+
+/* ---------- Tabs ---------- */
+nav[role="tablist"] {
+  display: flex;
+  gap: 2px;
+  margin-top: 10px;
+}
+nav[role="tablist"] button {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  padding: 9px 6px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+nav[role="tablist"] button:hover { background: var(--surface-2); }
+nav[role="tablist"] button[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+nav[role="tablist"] button .count {
+  color: var(--text-dimmer);
+  font-weight: 400;
+  margin-left: 3px;
+}
+nav[role="tablist"] button[aria-selected="true"] .count { color: var(--text-dim); }
+
+/* ---------- Main / Toolbar ---------- */
+main {
+  flex: 1;
+  padding: 14px 16px 60px;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+.view[hidden] { display: none; }
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip:hover { border-color: var(--text-dim); }
+select.filter-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 13px;
+}
+.toolbar-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.toolbar-check input { accent-color: var(--accent); }
+.toolbar-spacer { flex: 1; }
+.toolbar-hint { font-size: 12.5px; color: var(--text-dimmer); }
+
+.empty-state {
+  color: var(--text-dim);
+  padding: 40px 10px;
+  text-align: center;
+  font-size: 14px;
+}
+.empty-state .btn-link { color: var(--accent); background: none; border: none; cursor: pointer; font: inherit; text-decoration: underline; }
+
+/* ---------- Verzeichnis-Liste ---------- */
+.az-group { margin-bottom: 4px; }
+.az-letter {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+  padding: 10px 4px 4px;
+  letter-spacing: 0.5px;
+}
+.list { display: flex; flex-direction: column; }
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-align: left;
+  background: none;
+  width: 100%;
+  color: var(--text);
+}
+.row:hover { background: var(--surface); border-color: var(--border); }
+.row-marker {
+  flex-shrink: 0;
+  width: 16px;
+  padding-top: 2px;
+  text-align: center;
+  color: var(--diamond);
+  font-size: 12px;
+  line-height: 1;
+}
+.row-body { flex: 1; min-width: 0; }
+.row-top { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.row-name { font-weight: 600; }
+.row-art {
+  font-size: 11.5px;
+  color: var(--text-dimmer);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.row-meta {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.row-themes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.theme-tag {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.row-counts {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-dimmer);
+  text-align: right;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+/* ---------- Agenda ---------- */
+.agenda-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 8px;
+  color: var(--text-dimmer);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.agenda-divider::before, .agenda-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.agenda-divider.today { color: var(--accent); }
+.agenda-divider.today::before, .agenda-divider.today::after { background: var(--accent-dim); }
+.agenda-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 8px;
+}
+.event-row .row-top { gap: 8px; }
+.event-date {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+.badge-own {
+  font-size: 11px;
+  color: var(--diamond);
+  border: 1px solid var(--diamond);
+  border-radius: 5px;
+  padding: 0 5px;
+}
+
+/* ---------- Ideen Karten ---------- */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card:hover { border-color: var(--text-dimmer); }
+.card-title { font-weight: 600; }
+.card-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-actors {
+  font-size: 12px;
+  color: var(--text-dimmer);
+  margin-top: auto;
+}
+.card-date { font-size: 11.5px; color: var(--text-dimmer); }
+
+/* ---------- Dialoge ---------- */
+dialog {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(84vh, 820px);
+  overflow: hidden;
+  flex-direction: column;
+}
+dialog[open] { display: flex; }
+dialog::backdrop { background: rgba(0,0,0,0.6); }
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.dialog-head-main { flex: 1; min-width: 0; }
+.dialog-eyebrow { font-size: 11.5px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.5px; }
+.dialog-title { font-size: 18px; font-weight: 700; margin-top: 2px; word-break: break-word; }
+.dialog-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.text-badge {
+  font-size: 11.5px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--diamond);
+  color: var(--diamond);
+}
+.dialog-back {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.dialog-back:hover { background: var(--surface-2); }
+.dialog-back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
+.dialog-close {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; width: 28px; height: 28px; border-radius: 7px;
+  font-size: 18px; line-height: 1; flex-shrink: 0;
+}
+.dialog-close:hover { background: var(--surface-2); color: var(--text); }
+.dialog-body { padding: 14px 18px 18px; overflow-y: auto; flex: 1; }
+.dialog-foot {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.field-group { margin-bottom: 14px; }
+.field-label {
+  font-size: 11.5px;
+  color: var(--text-dimmer);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+.field-value { font-size: 14.5px; white-space: pre-wrap; }
+.field-value a { color: var(--accent); }
+.field-value.empty { color: var(--text-dimmer); font-style: italic; }
+.ref-list { display: flex; flex-direction: column; gap: 4px; }
+.ref-item {
+  background: var(--surface-2);
+  border-radius: 7px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  color: var(--text);
+  width: 100%;
+  font-size: 13.5px;
+}
+.ref-item:hover { background: var(--surface-3); }
+.ref-item .ref-sub { color: var(--text-dim); font-size: 12px; margin-top: 1px; }
+
+/* ---------- Formulare ---------- */
+.form-field { margin-bottom: 13px; }
+.form-field label {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.form-field label .req { color: var(--danger); }
+.form-field input[type="text"],
+.form-field input[type="date"],
+.form-field input[type="url"],
+.form-field input[type="password"],
+.form-field textarea,
+.form-field select {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: var(--text);
+}
+.form-field textarea { resize: vertical; min-height: 60px; }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-field { flex: 1; }
+.radio-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.radio-row label { display: flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--text); margin-bottom: 0; }
+.radio-row input { accent-color: var(--accent); }
+.checkbox-field { display: flex; align-items: center; gap: 7px; }
+.checkbox-field input { accent-color: var(--accent); }
+.checkbox-field label { margin-bottom: 0 !important; color: var(--text) !important; }
+
+.theme-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.theme-picker .chip { font-size: 12.5px; padding: 4px 10px; }
+.theme-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.theme-add-row input { flex: 1; }
+.theme-add-row button { flex-shrink: 0; }
+
+.sub-rows { display: flex; flex-direction: column; gap: 7px; }
+.sub-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 7px;
+}
+.sub-row input { flex: 1; min-width: 0; }
+.sub-row input[list] { flex: 1.4; }
+.sub-row-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.sub-row-remove:hover { background: var(--surface-3); color: var(--danger); }
+.sub-row-add {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 2px;
+}
+.sub-row-add:hover { border-color: var(--text-dim); color: var(--text); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--text-dim); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #0a0a0a; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-danger { color: var(--danger); border-color: var(--danger); background: none; }
+.btn-danger:hover { background: rgba(239,68,68,0.1); }
+.btn-danger.confirming { background: var(--danger); color: #fff; }
+.btn-ghost { background: none; border-color: transparent; color: var(--text-dim); }
+.btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn-spacer { flex: 1; }
+
+.warn-box {
+  background: rgba(245,158,11,0.1);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.warn-box ul { margin: 6px 0 0 18px; }
+
+/* ---------- Picker (Neu) ---------- */
+.picker-options { display: flex; flex-direction: column; gap: 8px; }
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+}
+.picker-option:hover { border-color: var(--accent); }
+.picker-option svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; flex-shrink: 0; }
+.picker-option-title { font-weight: 600; font-size: 14.5px; }
+.picker-option-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 1px; }
+
+/* ---------- Settings ---------- */
+.settings-section { margin-bottom: 20px; }
+.settings-section h3 { font-size: 13.5px; margin-bottom: 8px; }
+.settings-hint { font-size: 12px; color: var(--text-dimmer); margin-bottom: 10px; line-height: 1.5; }
+.settings-hint a { color: var(--accent); }
+.settings-status { font-size: 12.5px; margin-top: 8px; min-height: 18px; }
+.settings-status.ok { color: #4ade80; }
+.settings-status.err { color: var(--danger); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .header-title { display: none; }
+  .header-row { gap: 6px; flex-wrap: nowrap; }
+  .search-wrap { flex-basis: 60px; }
+  .btn-new { padding: 7px 10px; }
+  dialog { width: 100vw; max-height: 100vh; height: 100%; border-radius: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-dot.syncing { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <span class="header-title">Feld</span>
+    <form class="search-wrap" id="searchForm" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <label for="searchInput" class="sr-only">Suche über Verzeichnis, Agenda und Ideen</label>
+      <input type="search" id="searchInput" placeholder="Suche …" autocomplete="off">
+      <button type="button" class="search-clear" id="searchClear" aria-label="Suche löschen">×</button>
+    </form>
+    <button class="btn-new" id="btnNew">+ Neu</button>
+    <button class="icon-btn" id="btnSync" title="Sync nicht eingerichtet · auf ⚙ tippen" aria-label="Sync-Status">
+      <span class="sync-dot off" id="syncDot"></span>
+    </button>
+    <button class="icon-btn" id="btnSettings" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
+    </button>
+  </div>
+  <nav role="tablist" aria-label="Ansichten" id="tabs">
+    <button role="tab" id="tab-verzeichnis" aria-controls="view-verzeichnis" aria-selected="true" data-view="verzeichnis">Verzeichnis <span class="count" id="count-verzeichnis"></span></button>
+    <button role="tab" id="tab-agenda" aria-controls="view-agenda" aria-selected="false" tabindex="-1" data-view="agenda">Agenda <span class="count" id="count-agenda"></span></button>
+    <button role="tab" id="tab-ideen" aria-controls="view-ideen" aria-selected="false" tabindex="-1" data-view="ideen">Ideen <span class="count" id="count-ideen"></span></button>
+  </nav>
+</header>
+
+<div id="liveRegion" class="sr-only" aria-live="polite" role="status"></div>
+
+<main id="main">
+
+  <section class="view" id="view-verzeichnis" role="tabpanel" aria-labelledby="tab-verzeichnis" tabindex="0">
+    <div class="toolbar">
+      <div class="chip-group" id="artFilter" role="group" aria-label="Filter nach Art">
+        <button class="chip" data-art="Person" aria-pressed="false">Person</button>
+        <button class="chip" data-art="Initiative" aria-pressed="false">Initiative</button>
+        <button class="chip" data-art="Institution" aria-pressed="false">Institution</button>
+      </div>
+      <select class="filter-select" id="themaFilter" aria-label="Filter nach Thema">
+        <option value="">Alle Themen</option>
+      </select>
+      <label class="toolbar-check">
+        <input type="checkbox" id="zusammenarbeitFilter">
+        nur zusammengearbeitet
+      </label>
+      <div class="toolbar-spacer"></div>
+    </div>
+    <div class="list" id="verzeichnisList"></div>
+  </section>
+
+  <section class="view" id="view-agenda" role="tabpanel" aria-labelledby="tab-agenda" tabindex="0" hidden>
+    <div class="toolbar">
+      <div class="chip-group" id="eigeneFilter" role="group" aria-label="Eigene oder Dritte">
+        <button class="chip" data-eigene="alle" aria-pressed="true">Alle</button>
+        <button class="chip" data-eigene="eigene" aria-pressed="false">Eigene</button>
+        <button class="chip" data-eigene="dritte" aria-pressed="false">Dritte</button>
+      </div>
+      <div class="chip-group" id="zeitFilter" role="group" aria-label="Zeitraum">
+        <button class="chip" data-zeit="alle" aria-pressed="true">Alle</button>
+        <button class="chip" data-zeit="anstehend" aria-pressed="false">Anstehend</button>
+        <button class="chip" data-zeit="vergangen" aria-pressed="false">Vergangen</button>
+      </div>
+    </div>
+    <div class="list" id="agendaList"></div>
+  </section>
+
+  <section class="view" id="view-ideen" role="tabpanel" aria-labelledby="tab-ideen" tabindex="0" hidden>
+    <div class="cards" id="ideenList"></div>
+  </section>
+
+</main>
+
+<!-- Detail-Dialog -->
+<dialog id="detailDialog">
+  <div class="dialog-head">
+    <button class="dialog-back" id="detailBack" aria-label="Zurück" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="dialog-head-main">
+      <div class="dialog-eyebrow" id="detailEyebrow"></div>
+      <div class="dialog-title" id="detailTitle"></div>
+      <div class="dialog-badges" id="detailBadges"></div>
+    </div>
+    <button class="dialog-close" id="detailClose" aria-label="Schliessen">×</button>
+  </div>
+  <div class="dialog-body" id="detailBody"></div>
+  <div class="dialog-foot" id="detailFoot"></div>
+</dialog>
+
+<!-- Formular-Dialog -->
+<dialog id="formDialog">
+  <div class="dialog-head">
+    <div class="dialog-head-main">
+      <div class="dialog-eyebrow" id="formEyebrow"></div>
+      <div class="dialog-title" id="formTitle"></div>
+    </div>
+    <button class="dialog-close" id="formClose" aria-label="Schliessen">×</button>
+  </div>
+  <form class="dialog-body" id="formBody"></form>
+  <div class="dialog-foot" id="formFoot"></div>
+</dialog>
+
+<!-- Neu-Auswahl-Dialog -->
+<dialog id="pickerDialog">
+  <div class="dialog-head">
+    <div class="dialog-head-main">
+      <div class="dialog-title">Neu anlegen</div>
+    </div>
+    <button class="dialog-close" id="pickerClose" aria-label="Schliessen">×</button>
+  </div>
+  <div class="dialog-body">
+    <div class="picker-options">
+      <button class="picker-option" data-type="akteur">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span><span class="picker-option-title">Akteur</span><br><span class="picker-option-desc">Person, Initiative oder Institution</span></span>
+      </button>
+      <button class="picker-option" data-type="veranstaltung">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+        <span><span class="picker-option-title">Veranstaltung</span><br><span class="picker-option-desc">Eigene oder Veranstaltung Dritter</span></span>
+      </button>
+      <button class="picker-option" data-type="idee">
+        <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a6 6 0 00-3.5 10.9c.6.44.9 1.1.9 1.85V15h5.2v-.25c0-.75.3-1.4.9-1.85A6 6 0 0012 2z"/></svg>
+        <span><span class="picker-option-title">Idee</span><br><span class="picker-option-desc">Von einem Satz bis zu einem Konzept</span></span>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Einstellungen-Dialog -->
+<dialog id="settingsDialog">
+  <div class="dialog-head">
+    <div class="dialog-head-main"><div class="dialog-title">Einstellungen</div></div>
+    <button class="dialog-close" id="settingsClose" aria-label="Schliessen">×</button>
+  </div>
+  <div class="dialog-body">
+
+    <div class="settings-section">
+      <h3>GitHub-Sync</h3>
+      <p class="settings-hint">
+        Daten liegen als JSON in einem separaten GitHub-Repository.
+        Token erstellen unter <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github.com/settings/tokens</a> —
+        «Contents: Read and write» auf das Daten-Repo genügt.
+      </p>
+      <div class="form-field">
+        <label for="cfg-owner">GitHub-Benutzername / Organisation</label>
+        <input type="text" id="cfg-owner" autocomplete="off" placeholder="z. B. Xlozy">
+      </div>
+      <div class="form-field">
+        <label for="cfg-repo">Repository</label>
+        <input type="text" id="cfg-repo" autocomplete="off" placeholder="feld-data">
+      </div>
+      <div class="form-field">
+        <label for="cfg-path">Pfad zur Datei im Repository</label>
+        <input type="text" id="cfg-path" autocomplete="off" placeholder="feld-daten.json">
+      </div>
+      <div class="form-field">
+        <label for="cfg-token">Personal Access Token</label>
+        <input type="password" id="cfg-token" autocomplete="off" placeholder="github_pat_…">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSaveSync" type="button">Verbinden &amp; synchronisieren</button>
+        <button class="btn btn-ghost" id="btnDisconnectSync" type="button">Trennen</button>
+      </div>
+      <div class="settings-status" id="syncSettingsStatus"></div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Themenvokabular</h3>
+      <p class="settings-hint">Kontrolliertes Vokabular, erweiterbar. Neue Themen können auch direkt beim Bearbeiten eines Akteurs hinzugefügt werden.</p>
+      <div class="theme-picker" id="themaVocabList"></div>
+      <div class="theme-add-row">
+        <input type="text" id="themaVocabInput" placeholder="Neues Thema …">
+        <button class="btn" id="themaVocabAdd" type="button">Hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Export / Import</h3>
+      <p class="settings-hint">Export als Sicherung oder zur Übertragung. Import fügt Daten aus einer Datei zusammen (gleiche ID = neuere Version gewinnt).</p>
+      <div class="btn-row">
+        <button class="btn" id="btnExport" type="button">Als JSON exportieren</button>
+        <button class="btn" id="btnImport" type="button">JSON importieren …</button>
+        <button class="btn" id="btnTemplate" type="button">Vorlage herunterladen</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" class="sr-only">
+      <div class="settings-status" id="importStatus"></div>
+    </div>
+
+  </div>
+</dialog>
+
+<script>
+'use strict';
+
+/* =========================================================================
+   Konstanten & Basis-State
+   ========================================================================= */
+const STORAGE_KEY   = 'feld_data_v1';
+const CONFIG_KEY    = 'feld_sync_config_v1';
+const TAB_KEY       = 'feld_last_tab_v1';
+const SHA_KEY       = 'feld_remote_sha_v1';
+
+const THEMEN_KERN = ['Spaziergangswissenschaft','Literatur','Kunst','Architektur','Stadtentwicklung',
+                      'Landschaft','Religion','Hochschule','Geschichte','Ökologie','Lesen','Philosophie'];
+
+const EIGENE_IDS = ['vspw', 'lokal']; // eigene Organisationen, siehe KONZEPT 5.3 „ohne Verein, Lokal …"
+
+let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, themenVokabular: THEMEN_KERN.slice() };
+let syncConfig = null;
+let remoteSha = null;
+let syncInFlight = false;
+let currentView = 'verzeichnis';
+let searchQuery = '';
+let dialogStack = []; // für Rückverweis-Navigation im Detail-Dialog: {type,id}
+
+// Verzeichnis-Filterzustand
+let filterArt = new Set();
+let filterThema = '';
+let filterZusammenarbeit = false;
+
+// Agenda-Filterzustand
+let filterEigene = 'alle';   // alle | eigene | dritte
+let filterZeit = 'alle';     // alle | anstehend | vergangen
+
+/* =========================================================================
+   Utilities
+   ========================================================================= */
+function $(id) { return document.getElementById(id); }
+
+function uid(name) {
+  const slug = slugify(name).slice(0, 22) || 'eintrag';
+  const suffix = Math.random().toString(36).slice(2, 6);
+  let id = `${slug}-${suffix}`;
+  while (DATA.akteure[id] || DATA.veranstaltungen[id] || DATA.ideen[id]) {
+    id = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+  return id;
+}
+
+function slugify(str) {
+  return normalize(str || '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Diakritika-unabhängiger Vergleich für Suche/Slugs (ü → u, é → e, ß bleibt ss)
+function normalize(str) {
+  return String(str || '')
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
+function todayISO() {
+  const d = new Date();
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0, 10);
+}
+
+function nowISO() { return new Date().toISOString(); }
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  if (!y || !m || !d) return iso;
+  return `${d}.${m}.${y}`;
+}
+
+function formatDateRange(datum, bis) {
+  if (bis && bis !== datum) return `${formatDate(datum)}–${formatDate(bis)}`;
+  return formatDate(datum);
+}
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function announce(msg) {
+  const el = $('liveRegion');
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+/* =========================================================================
+   Storage (lokal)
+   ========================================================================= */
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      DATA.akteure = parsed.akteure || {};
+      DATA.veranstaltungen = parsed.veranstaltungen || {};
+      DATA.ideen = parsed.ideen || {};
+      DATA.themenVokabular = (Array.isArray(parsed.themenVokabular) && parsed.themenVokabular.length)
+        ? parsed.themenVokabular : THEMEN_KERN.slice();
+    }
+  } catch (e) { console.error('Lokale Daten nicht lesbar', e); }
+
+  try {
+    const rawCfg = localStorage.getItem(CONFIG_KEY);
+    syncConfig = rawCfg ? JSON.parse(rawCfg) : null;
+  } catch (e) { syncConfig = null; }
+
+  remoteSha = localStorage.getItem(SHA_KEY) || null;
+}
+
+function saveLocal() {
+  const payload = {
+    version: 1,
+    updated: nowISO(),
+    themenVokabular: DATA.themenVokabular,
+    akteure: DATA.akteure,
+    veranstaltungen: DATA.veranstaltungen,
+    ideen: DATA.ideen,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function saveSyncConfig() {
+  if (syncConfig) localStorage.setItem(CONFIG_KEY, JSON.stringify(syncConfig));
+  else localStorage.removeItem(CONFIG_KEY);
+}
+
+/* =========================================================================
+   Datenschicht: list / get / put / delete (austauschbares Interface)
+   ========================================================================= */
+const Store = {
+  list(type) {
+    return Object.keys(DATA[type])
+      .filter(id => !DATA[type][id].deleted)
+      .map(id => ({ id, ...DATA[type][id] }));
+  },
+  get(type, id) {
+    const o = DATA[type][id];
+    if (!o || o.deleted) return null;
+    return { id, ...o };
+  },
+  // Legt an (id=null) oder aktualisiert (id gesetzt). Gibt die id zurück.
+  put(type, id, fields) {
+    const isNew = !id;
+    if (isNew) {
+      const nameField = type === 'akteure' ? fields.name : fields.titel;
+      id = uid(nameField);
+    }
+    const existing = DATA[type][id] || {};
+    DATA[type][id] = { ...existing, ...fields, modified: nowISO() };
+    if (type === 'ideen' && !DATA[type][id].erstellt) DATA[type][id].erstellt = todayISO();
+    delete DATA[type][id].deleted;
+    saveLocal();
+    return id;
+  },
+  // Tombstone-Löschung (für Sync-Merge), referenzierende Felder werden NICHT
+  // hier bereinigt — das übernimmt deleteWithIntegrity().
+  remove(type, id) {
+    if (!DATA[type][id]) return;
+    DATA[type][id] = { deleted: true, modified: nowISO() };
+    saveLocal();
+  },
+};
+
+/* =========================================================================
+   Abgeleitete Werte (Ableiten statt pflegen, KONZEPT 4.)
+   ========================================================================= */
+function istZusammengearbeitet(akteurId) {
+  const a = DATA.akteure[akteurId];
+  if (!a || a.deleted) return false;
+  if (a.zusammenarbeit) return true;
+  return Store.list('veranstaltungen').some(v =>
+    v.eigene && (v.beteiligte || []).some(b => b.id === akteurId));
+}
+
+function veranstaltungStatus(v) {
+  const massgebend = v.bis || v.datum;
+  return massgebend >= todayISO() ? 'anstehend' : 'vergangen';
+}
+
+function akteurName(id) {
+  const a = DATA.akteure[id];
+  return a && !a.deleted ? a.name : null;
+}
+
+function akteurBackrefs(id) {
+  const veranstaltungen = [];
+  Store.list('veranstaltungen').forEach(v => {
+    const b = (v.beteiligte || []).find(x => x.id === id);
+    if (b) veranstaltungen.push({ item: v, rolle: b.rolle || '' });
+  });
+  veranstaltungen.sort((a, b) => (b.item.bis || b.item.datum).localeCompare(a.item.bis || a.item.datum));
+
+  const ideen = [];
+  Store.list('ideen').forEach(i => {
+    const a = (i.akteure || []).find(x => x.id === id);
+    if (a) ideen.push({ item: i, warum: a.warum || '' });
+  });
+  ideen.sort((a, b) => (b.item.erstellt || '').localeCompare(a.item.erstellt || ''));
+
+  const zugehoerige = Store.list('akteure')
+    .filter(a => a.zu === id)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  return { veranstaltungen, ideen, zugehoerige };
+}
+
+function veranstaltungBackrefs(id) {
+  const ideen = Store.list('ideen')
+    .filter(i => (i.veranstaltungen || []).includes(id))
+    .sort((a, b) => (b.erstellt || '').localeCompare(a.erstellt || ''));
+  return { ideen };
+}
+
+// Referenzen, die beim Löschen eines Akteurs/einer Veranstaltung verwaisen würden.
+function referencingFor(type, id) {
+  if (type === 'akteure') {
+    const b = akteurBackrefs(id);
+    const out = [];
+    b.veranstaltungen.forEach(x => out.push(`Veranstaltung „${x.item.titel}"`));
+    b.ideen.forEach(x => out.push(`Idee „${x.item.titel}"`));
+    b.zugehoerige.forEach(x => out.push(`Akteur „${x.name}" (gehört zu)`));
+    return out;
+  }
+  if (type === 'veranstaltungen') {
+    const b = veranstaltungBackrefs(id);
+    return b.ideen.map(x => `Idee „${x.titel}"`);
+  }
+  return [];
+}
+
+// Entfernt verwaiste Verweise, nachdem ein Löschen bestätigt wurde.
+function stripReferencesTo(type, id) {
+  if (type === 'akteure') {
+    Object.entries(DATA.veranstaltungen).forEach(([vid, v]) => {
+      if (v.deleted || !(v.beteiligte || []).some(b => b.id === id)) return;
+      v.beteiligte = v.beteiligte.filter(b => b.id !== id);
+      v.modified = nowISO();
+    });
+    Object.entries(DATA.ideen).forEach(([iid, i]) => {
+      if (i.deleted || !(i.akteure || []).some(a => a.id === id)) return;
+      i.akteure = i.akteure.filter(a => a.id !== id);
+      i.modified = nowISO();
+    });
+    Object.entries(DATA.akteure).forEach(([aid, a]) => {
+      if (a.deleted || a.zu !== id) return;
+      a.zu = '';
+      a.modified = nowISO();
+    });
+  }
+  if (type === 'veranstaltungen') {
+    Object.entries(DATA.ideen).forEach(([iid, i]) => {
+      if (i.deleted || !(i.veranstaltungen || []).includes(id)) return;
+      i.veranstaltungen = i.veranstaltungen.filter(x => x !== id);
+      i.modified = nowISO();
+    });
+  }
+}
+
+function deleteWithIntegrity(type, id) {
+  stripReferencesTo(type, id);
+  Store.remove(type, id);
+}
+
+// Unbekannte Namen in Beteiligten-/Ideenformularen werden als neue Akteure
+// angelegt (KONZEPT 4.). art: 'Person' (Standard) oder 'Institution' (für «Gehört zu»).
+function resolveOrCreateAkteur(name, art) {
+  name = (name || '').trim();
+  if (!name) return null;
+  const existing = Store.list('akteure').find(a => normalize(a.name) === normalize(name));
+  if (existing) return existing.id;
+  return Store.put('akteure', null, { name, art: art || 'Person', themen: [], zu: '', zusammenarbeit: false });
+}
+
+/* =========================================================================
+   Suche (5.2): diakritika-unabhängig, mehrere Wörter UND-verknüpft
+   ========================================================================= */
+function getSearchWords() {
+  return normalize(searchQuery).split(/\s+/).filter(Boolean);
+}
+
+function haystackFor(type, item) {
+  if (type === 'akteure') {
+    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.notiz, item.web, akteurName(item.zu)];
+  }
+  if (type === 'veranstaltungen') {
+    const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
+    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, ...beteiligteNamen];
+  }
+  if (type === 'ideen') {
+    const namen = (item.akteure || []).map(a => akteurName(a.id));
+    const warums = (item.akteure || []).map(a => a.warum);
+    return [item.titel, item.text, ...namen, ...warums];
+  }
+  return [];
+}
+
+function searchFilter(type, items) {
+  const words = getSearchWords();
+  if (!words.length) return items;
+  return items.filter(item => {
+    const hay = normalize(haystackFor(type, item).filter(Boolean).join(' · '));
+    return words.every(w => hay.includes(w));
+  });
+}
+
+/* =========================================================================
+   Rendering: Tabs / Zähler
+   ========================================================================= */
+const TAB_TYPE = { verzeichnis: 'akteure', agenda: 'veranstaltungen', ideen: 'ideen' };
+const TAB_NOUN = { verzeichnis: ['Akteur', 'Akteure'], agenda: ['Veranstaltung', 'Veranstaltungen'], ideen: ['Idee', 'Ideen'] };
+
+function renderTabCounts() {
+  const hasQuery = getSearchWords().length > 0;
+  Object.entries(TAB_TYPE).forEach(([tab, type]) => {
+    const total = Store.list(type).length;
+    const el = $('count-' + tab);
+    if (!hasQuery) { el.textContent = `(${total})`; return; }
+    const hits = searchFilter(type, Store.list(type)).length;
+    el.textContent = `(${hits}/${total})`;
+  });
+}
+
+function pluralize(n, [sing, plur]) { return n === 1 ? sing : plur; }
+
+/* =========================================================================
+   Rendering: Verzeichnis
+   ========================================================================= */
+function renderVerzeichnis() {
+  let items = searchFilter('akteure', Store.list('akteure'));
+  if (filterArt.size) items = items.filter(a => filterArt.has(a.art));
+  if (filterThema) items = items.filter(a => (a.themen || []).includes(filterThema));
+  if (filterZusammenarbeit) items = items.filter(a => istZusammengearbeitet(a.id));
+  items.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  const root = $('verzeichnisList');
+  root.innerHTML = '';
+
+  if (!items.length) {
+    root.innerHTML = `<div class="empty-state">${getSearchWords().length || filterArt.size || filterThema || filterZusammenarbeit
+      ? 'Keine Treffer mit diesen Filtern.' : 'Noch keine Akteure. <button class="btn-link" id="emptyNewAkteur">Ersten Akteur anlegen</button>'}</div>`;
+    const btn = $('emptyNewAkteur');
+    if (btn) btn.addEventListener('click', () => openForm('akteure', null));
+    announce('0 Akteure');
+    return;
+  }
+
+  let lastLetter = '';
+  items.forEach(a => {
+    const letter = normalize(a.name).charAt(0).toUpperCase();
+    if (letter !== lastLetter) {
+      lastLetter = letter;
+      const h = document.createElement('div');
+      h.className = 'az-letter';
+      h.textContent = letter;
+      root.appendChild(h);
+    }
+    root.appendChild(renderAkteurRow(a));
+  });
+
+  announce(`${items.length} ${pluralize(items.length, TAB_NOUN.verzeichnis)}`);
+}
+
+function renderAkteurRow(a) {
+  const backrefs = akteurBackrefs(a.id);
+  const zusammen = istZusammengearbeitet(a.id);
+  const zuName = a.zu ? akteurName(a.zu) : null;
+
+  const row = document.createElement('button');
+  row.className = 'row';
+  row.type = 'button';
+  row.innerHTML = `
+    <span class="row-marker">${zusammen ? '◆' : ''}<span class="sr-only">${zusammen ? 'zusammengearbeitet' : ''}</span></span>
+    <span class="row-body">
+      <span class="row-top">
+        <span class="row-name">${escapeHtml(a.name)}</span>
+        <span class="row-art">${escapeHtml(a.art)}</span>
+      </span>
+      <span class="row-meta">
+        ${zuName ? `<span>→ ${escapeHtml(zuName)}</span>` : ''}
+        ${a.ort ? `<span>${escapeHtml(a.ort)}</span>` : ''}
+      </span>
+      ${(a.themen || []).length ? `<span class="row-themes">${a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join('')}</span>` : ''}
+    </span>
+    <span class="row-counts">${backrefs.veranstaltungen.length} Veranst.<br>${backrefs.ideen.length} Ideen</span>
+  `;
+  row.addEventListener('click', () => openDetail('akteure', a.id));
+  return row;
+}
+
+/* =========================================================================
+   Rendering: Agenda
+   ========================================================================= */
+function wichtigsteBeteiligte(v) {
+  return (v.beteiligte || [])
+    .filter(b => !EIGENE_IDS.includes(b.id) && b.rolle !== 'Förderung')
+    .map(b => {
+      const name = akteurName(b.id);
+      if (!name) return null;
+      return b.rolle ? `${name} (${b.rolle})` : name;
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
+function renderAgenda() {
+  let items = searchFilter('veranstaltungen', Store.list('veranstaltungen'));
+  if (filterEigene === 'eigene') items = items.filter(v => v.eigene);
+  if (filterEigene === 'dritte') items = items.filter(v => !v.eigene);
+
+  const withStatus = items.map(v => ({ v, status: veranstaltungStatus(v) }));
+  let anstehend = withStatus.filter(x => x.status === 'anstehend').sort((a, b) => (a.v.bis || a.v.datum).localeCompare(b.v.bis || b.v.datum));
+  let vergangen = withStatus.filter(x => x.status === 'vergangen').sort((a, b) => (b.v.bis || b.v.datum).localeCompare(a.v.bis || a.v.datum));
+
+  if (filterZeit === 'anstehend') vergangen = [];
+  if (filterZeit === 'vergangen') anstehend = [];
+
+  const root = $('agendaList');
+  root.innerHTML = '';
+  const total = anstehend.length + vergangen.length;
+
+  if (!total) {
+    root.innerHTML = `<div class="empty-state">${getSearchWords().length ? 'Keine Treffer mit diesen Filtern.' : 'Noch keine Veranstaltungen. <button class="btn-link" id="emptyNewVeranstaltung">Erste Veranstaltung anlegen</button>'}</div>`;
+    const btn = $('emptyNewVeranstaltung');
+    if (btn) btn.addEventListener('click', () => openForm('veranstaltungen', null));
+    announce('0 Veranstaltungen');
+    return;
+  }
+
+  if (anstehend.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'agenda-section-label';
+    lbl.textContent = 'Anstehend';
+    root.appendChild(lbl);
+    anstehend.forEach(x => root.appendChild(renderVeranstaltungRow(x.v, x.status)));
+  }
+  if (filterZeit === 'alle' && anstehend.length && vergangen.length) {
+    const div = document.createElement('div');
+    div.className = 'agenda-divider today';
+    div.textContent = 'Heute';
+    root.appendChild(div);
+  } else if (vergangen.length) {
+    const lbl = document.createElement('div');
+    lbl.className = 'agenda-section-label';
+    lbl.textContent = 'Vergangen';
+    root.appendChild(lbl);
+  }
+  vergangen.forEach(x => root.appendChild(renderVeranstaltungRow(x.v, x.status)));
+
+  announce(`${total} ${pluralize(total, TAB_NOUN.agenda)}`);
+}
+
+function renderVeranstaltungRow(v, status) {
+  const beteiligte = wichtigsteBeteiligte(v);
+  const row = document.createElement('button');
+  row.className = 'row event-row';
+  row.type = 'button';
+  row.innerHTML = `
+    <span class="row-marker">${v.eigene ? '◆' : ''}<span class="sr-only">${v.eigene ? 'eigene Veranstaltung' : ''}</span></span>
+    <span class="row-body">
+      <span class="row-top">
+        <span class="row-name">${escapeHtml(v.titel)}</span>
+        ${v.format ? `<span class="row-art">${escapeHtml(v.format)}</span>` : ''}
+      </span>
+      <span class="row-meta">
+        <span class="event-date">${escapeHtml(formatDateRange(v.datum, v.bis))}${v.zeit ? ', ' + escapeHtml(v.zeit) : ''}</span>
+        ${v.ort ? `<span>${escapeHtml(v.ort)}</span>` : ''}
+      </span>
+      ${beteiligte ? `<span class="row-meta">${escapeHtml(beteiligte)}</span>` : ''}
+    </span>
+  `;
+  row.addEventListener('click', () => openDetail('veranstaltungen', v.id));
+  return row;
+}
+
+/* =========================================================================
+   Rendering: Ideen
+   ========================================================================= */
+function renderIdeen() {
+  let items = searchFilter('ideen', Store.list('ideen'));
+  items.sort((a, b) => (b.erstellt || '').localeCompare(a.erstellt || ''));
+
+  const root = $('ideenList');
+  root.innerHTML = '';
+
+  if (!items.length) {
+    root.innerHTML = `<div class="empty-state">${getSearchWords().length ? 'Keine Treffer.' : 'Noch keine Ideen. <button class="btn-link" id="emptyNewIdee">Erste Idee anlegen</button>'}</div>`;
+    const btn = $('emptyNewIdee');
+    if (btn) btn.addEventListener('click', () => openForm('ideen', null));
+    announce('0 Ideen');
+    return;
+  }
+
+  items.forEach(i => root.appendChild(renderIdeeCard(i)));
+  announce(`${items.length} ${pluralize(items.length, TAB_NOUN.ideen)}`);
+}
+
+function renderIdeeCard(i) {
+  const namen = (i.akteure || []).map(a => akteurName(a.id)).filter(Boolean);
+  const card = document.createElement('button');
+  card.className = 'card';
+  card.type = 'button';
+  card.innerHTML = `
+    <span class="card-title">${escapeHtml(i.titel)}</span>
+    ${i.text ? `<span class="card-text">${escapeHtml(i.text)}</span>` : ''}
+    ${namen.length ? `<span class="card-actors">${namen.map(escapeHtml).join(', ')}</span>` : ''}
+    <span class="card-date">${formatDate(i.erstellt)}</span>
+  `;
+  card.addEventListener('click', () => openDetail('ideen', i.id));
+  return card;
+}
+
+/* =========================================================================
+   View-Umschaltung
+   ========================================================================= */
+function renderCurrentView() {
+  if (currentView === 'verzeichnis') renderVerzeichnis();
+  else if (currentView === 'agenda') renderAgenda();
+  else if (currentView === 'ideen') renderIdeen();
+}
+
+function renderAll() {
+  renderTabCounts();
+  renderCurrentView();
+  populateThemaFilter();
+}
+
+function switchView(view, { focus = false } = {}) {
+  currentView = view;
+  localStorage.setItem(TAB_KEY, view);
+  ['verzeichnis', 'agenda', 'ideen'].forEach(v => {
+    const tab = $('tab-' + v);
+    const panel = $('view-' + v);
+    const active = v === view;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    panel.hidden = !active;
+  });
+  renderCurrentView();
+  if (focus) $('tab-' + view).focus();
+}
+
+function populateThemaFilter() {
+  const sel = $('themaFilter');
+  const current = sel.value;
+  const themen = DATA.themenVokabular;
+  sel.innerHTML = '<option value="">Alle Themen</option>' +
+    themen.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  sel.value = themen.includes(current) ? current : '';
+}
+
+/* =========================================================================
+   Detail-Dialog (native <dialog>, Rückverweise navigieren innerhalb)
+   ========================================================================= */
+let currentDetail = null; // {type, id}
+
+const TYPE_LABEL = { akteure: 'Akteur', veranstaltungen: 'Veranstaltung', ideen: 'Idee' };
+
+function fieldGroup(label, html, empty) {
+  return `<div class="field-group">
+    <div class="field-label">${escapeHtml(label)}</div>
+    <div class="field-value${empty ? ' empty' : ''}">${html}</div>
+  </div>`;
+}
+
+function refButton(type, id, label, sub) {
+  return `<button type="button" class="ref-item" data-ref-type="${type}" data-ref-id="${id}">
+    ${escapeHtml(label)}${sub ? `<div class="ref-sub">${escapeHtml(sub)}</div>` : ''}
+  </button>`;
+}
+
+function webLink(web) {
+  if (!web) return '';
+  const href = /^https?:\/\//.test(web) ? web : `https://${web}`;
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(web)}</a>`;
+}
+
+function openDetail(type, id, opts = {}) {
+  const item = Store.get(type, id);
+  if (!item) { closeDetail(); return; }
+
+  if (!opts.viaBack) {
+    if (currentDetail && $('detailDialog').open) dialogStack.push(currentDetail);
+    else dialogStack = [];
+  }
+  currentDetail = { type, id };
+  $('detailBack').hidden = dialogStack.length === 0;
+
+  $('detailEyebrow').textContent = TYPE_LABEL[type];
+  $('detailTitle').textContent = type === 'akteure' ? item.name : item.titel;
+
+  const badges = [];
+  if (type === 'akteure' && istZusammengearbeitet(id)) badges.push('zusammengearbeitet');
+  if (type === 'veranstaltungen' && item.eigene) badges.push('eigene');
+  $('detailBadges').innerHTML = badges.map(b => `<span class="text-badge">${escapeHtml(b)}</span>`).join('');
+
+  $('detailBody').innerHTML = type === 'akteure' ? renderAkteurDetailBody(item)
+    : type === 'veranstaltungen' ? renderVeranstaltungDetailBody(item)
+    : renderIdeeDetailBody(item);
+
+  $('detailBody').querySelectorAll('[data-ref-type]').forEach(btn => {
+    btn.addEventListener('click', () => openDetail(btn.dataset.refType, btn.dataset.refId));
+  });
+
+  renderDetailFoot(type, item);
+
+  if (!$('detailDialog').open) $('detailDialog').showModal();
+}
+
+function renderAkteurDetailBody(a) {
+  const b = akteurBackrefs(a.id);
+  let html = '';
+  html += fieldGroup('Art', escapeHtml(a.art));
+  html += a.zu ? fieldGroup('Zugehörigkeit', refButton('akteure', a.zu, akteurName(a.zu) || '(unbekannt)'))
+                : '';
+  html += fieldGroup('Ort', a.ort ? escapeHtml(a.ort) : '–', !a.ort);
+  html += fieldGroup('Themen', (a.themen || []).length ? a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join(' ') : '–', !(a.themen || []).length);
+  html += fieldGroup('Web', a.web ? webLink(a.web) : '–', !a.web);
+  html += fieldGroup('Notiz', a.notiz ? escapeHtml(a.notiz) : '–', !a.notiz);
+  if (a.quelle) html += fieldGroup('Quelle', escapeHtml(a.quelle));
+
+  html += `<div class="field-group"><div class="field-label">Veranstaltungen (${b.veranstaltungen.length})</div>`;
+  html += b.veranstaltungen.length
+    ? `<div class="ref-list">${b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel, `${formatDateRange(x.item.datum, x.item.bis)}${x.rolle ? ' · ' + x.rolle : ''}`)).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+
+  html += `<div class="field-group"><div class="field-label">Ideen (${b.ideen.length})</div>`;
+  html += b.ideen.length
+    ? `<div class="ref-list">${b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel, x.warum)).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+
+  if (b.zugehoerige.length) {
+    html += `<div class="field-group"><div class="field-label">Zugehörige Akteure (${b.zugehoerige.length})</div>`;
+    html += `<div class="ref-list">${b.zugehoerige.map(x => refButton('akteure', x.id, x.name, x.art)).join('')}</div></div>`;
+  }
+  return html;
+}
+
+function renderVeranstaltungDetailBody(v) {
+  const b = veranstaltungBackrefs(v.id);
+  let html = '';
+  html += fieldGroup('Datum', formatDateRange(v.datum, v.bis));
+  html += fieldGroup('Zeit', v.zeit ? escapeHtml(v.zeit) : '–', !v.zeit);
+  html += fieldGroup('Ort', v.ort ? escapeHtml(v.ort) : '–', !v.ort);
+  html += fieldGroup('Format', v.format ? escapeHtml(v.format) : '–', !v.format);
+  html += fieldGroup('Reihe', v.reihe ? escapeHtml(v.reihe) : '–', !v.reihe);
+
+  html += `<div class="field-group"><div class="field-label">Beteiligte (${(v.beteiligte || []).length})</div>`;
+  html += (v.beteiligte || []).length
+    ? `<div class="ref-list">${v.beteiligte.map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.rolle)).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+
+  html += fieldGroup('Beschrieb', v.beschrieb ? escapeHtml(v.beschrieb) : '–', !v.beschrieb);
+  if (v.quelle) html += fieldGroup('Quelle', escapeHtml(v.quelle));
+
+  html += `<div class="field-group"><div class="field-label">Ideen, die darauf verweisen (${b.ideen.length})</div>`;
+  html += b.ideen.length
+    ? `<div class="ref-list">${b.ideen.map(i => refButton('ideen', i.id, i.titel)).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+  return html;
+}
+
+function renderIdeeDetailBody(i) {
+  let html = '';
+  html += fieldGroup('Text', i.text ? escapeHtml(i.text) : '–', !i.text);
+
+  html += `<div class="field-group"><div class="field-label">Akteure (${(i.akteure || []).length})</div>`;
+  html += (i.akteure || []).length
+    ? `<div class="ref-list">${i.akteure.map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.warum)).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+
+  html += `<div class="field-group"><div class="field-label">Veranstaltungen (${(i.veranstaltungen || []).length})</div>`;
+  html += (i.veranstaltungen || []).length
+    ? `<div class="ref-list">${i.veranstaltungen.map(vid => { const v = DATA.veranstaltungen[vid]; return v && !v.deleted ? refButton('veranstaltungen', vid, v.titel, formatDateRange(v.datum, v.bis)) : ''; }).join('')}</div>`
+    : `<div class="field-value empty">keine</div>`;
+  html += `</div>`;
+
+  html += fieldGroup('Erstellt', formatDate(i.erstellt));
+  return html;
+}
+
+function renderDetailFoot(type, item) {
+  const foot = $('detailFoot');
+  foot.innerHTML = '';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn btn-primary';
+  editBtn.type = 'button';
+  editBtn.textContent = 'Bearbeiten';
+  editBtn.addEventListener('click', () => openForm(type, item.id));
+  foot.appendChild(editBtn);
+
+  if (type === 'akteure') {
+    const ideeBtn = document.createElement('button');
+    ideeBtn.className = 'btn';
+    ideeBtn.type = 'button';
+    ideeBtn.textContent = 'Idee mit diesem Akteur';
+    ideeBtn.addEventListener('click', () => openForm('ideen', null, { prefillAkteur: item.id }));
+    foot.appendChild(ideeBtn);
+  }
+
+  foot.appendChild(Object.assign(document.createElement('div'), { className: 'btn-spacer' }));
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-danger';
+  delBtn.type = 'button';
+  delBtn.textContent = 'Löschen';
+  attachDeleteButton(delBtn, type, item.id, () => {
+    closeDetail();
+    renderAll();
+  });
+  foot.appendChild(delBtn);
+}
+
+function attachDeleteButton(btn, type, id, onDeleted) {
+  let armed = false;
+  let timer = null;
+  const warnId = 'warn-' + Math.random().toString(36).slice(2, 8);
+
+  function reset() {
+    armed = false;
+    btn.textContent = 'Löschen';
+    btn.classList.remove('confirming');
+    const w = document.getElementById(warnId);
+    if (w) w.remove();
+  }
+
+  btn.addEventListener('click', () => {
+    if (!armed) {
+      const refs = referencingFor(type, id);
+      armed = true;
+      btn.textContent = refs.length ? 'Trotzdem löschen?' : 'Wirklich löschen?';
+      btn.classList.add('confirming');
+      if (refs.length) {
+        const box = document.createElement('div');
+        box.id = warnId;
+        box.className = 'warn-box';
+        box.innerHTML = `Wird noch verwendet in:<ul>${refs.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`;
+        btn.closest('.dialog-foot, form').insertAdjacentElement('beforebegin', box);
+      }
+      timer = setTimeout(reset, 6000);
+    } else {
+      clearTimeout(timer);
+      deleteWithIntegrity(type, id);
+      reset();
+      onDeleted();
+    }
+  });
+}
+
+function closeDetail() {
+  if ($('detailDialog').open) $('detailDialog').close();
+  dialogStack = [];
+  currentDetail = null;
+}
+
+function refreshDetailIfShowing(type, id) {
+  if ($('detailDialog').open && currentDetail && currentDetail.type === type && currentDetail.id === id) {
+    openDetail(type, id, { viaBack: true });
+  }
+}
+
+/* =========================================================================
+   Datalists (Namensvorschläge für Formulare)
+   ========================================================================= */
+function ensureDatalist(id, values) {
+  let dl = document.getElementById(id);
+  if (!dl) { dl = document.createElement('datalist'); dl.id = id; document.body.appendChild(dl); }
+  dl.innerHTML = values.map(v => `<option value="${escapeHtml(v)}">`).join('');
+  return id;
+}
+
+function ensureAkteurDatalist() {
+  const names = Store.list('akteure').map(a => a.name).sort((a, b) => a.localeCompare(b, 'de'));
+  ensureDatalist('akteurNamesList', names);
+}
+
+const ROLLEN_VORSCHLAEGE = ['veranstaltend', 'Leitung', 'Moderation', 'Ort', 'Förderung', 'Kooperation'];
+
+function ensureHilfsDatalisten() {
+  const roles = new Set(ROLLEN_VORSCHLAEGE);
+  const formate = new Set();
+  const reihen = new Set();
+  Store.list('veranstaltungen').forEach(v => {
+    (v.beteiligte || []).forEach(b => { if (b.rolle) roles.add(b.rolle); });
+    if (v.format) formate.add(v.format);
+    if (v.reihe) reihen.add(v.reihe);
+  });
+  ensureDatalist('roleList', Array.from(roles));
+  ensureDatalist('formatList', Array.from(formate).sort((a, b) => a.localeCompare(b, 'de')));
+  ensureDatalist('reiheList', Array.from(reihen).sort((a, b) => a.localeCompare(b, 'de')));
+  ensureDatalist('veranstaltungTitelList', Store.list('veranstaltungen').map(v => v.titel).sort((a, b) => a.localeCompare(b, 'de')));
+}
+
+/* =========================================================================
+   Sub-Zeilen-Editor (Beteiligte / Akteure mit Begründung / Veranstaltungen)
+   ========================================================================= */
+function buildSubRowsEditor(container, initialRows, columns, addLabel) {
+  container.innerHTML = '';
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'sub-row-add';
+  addBtn.textContent = addLabel || '+ Zeile';
+  container.appendChild(addBtn);
+
+  function addRow(values) {
+    values = values || {};
+    const row = document.createElement('div');
+    row.className = 'sub-row';
+    columns.forEach(col => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = col.placeholder || '';
+      input.dataset.key = col.key;
+      if (col.list) input.setAttribute('list', col.list);
+      input.value = values[col.key] || '';
+      row.appendChild(input);
+    });
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'sub-row-remove';
+    rm.textContent = '×';
+    rm.setAttribute('aria-label', 'Zeile entfernen');
+    rm.addEventListener('click', () => row.remove());
+    row.appendChild(rm);
+    container.insertBefore(row, addBtn);
+  }
+
+  addBtn.addEventListener('click', () => addRow());
+  (initialRows || []).forEach(r => addRow(r));
+
+  return {
+    getValues() {
+      return Array.from(container.querySelectorAll('.sub-row')).map(row => {
+        const obj = {};
+        columns.forEach(col => { obj[col.key] = row.querySelector(`[data-key="${col.key}"]`).value.trim(); });
+        return obj;
+      }).filter(obj => obj[columns[0].key]);
+    },
+    addRow,
+  };
+}
+
+/* =========================================================================
+   Themen-Picker (kontrolliertes Vokabular, im Interface erweiterbar)
+   ========================================================================= */
+function buildThemePicker(fieldEl, selectedThemen) {
+  const pickerEl = fieldEl.querySelector('.theme-picker');
+  const addInput = fieldEl.querySelector('.theme-add-input');
+  const addBtn = fieldEl.querySelector('.theme-add-btn');
+
+  function render() {
+    pickerEl.innerHTML = DATA.themenVokabular.map(t =>
+      `<button type="button" class="chip" data-theme="${escapeHtml(t)}" aria-pressed="${selectedThemen.includes(t)}">${escapeHtml(t)}</button>`
+    ).join('');
+    pickerEl.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const t = chip.dataset.theme;
+        const idx = selectedThemen.indexOf(t);
+        if (idx > -1) selectedThemen.splice(idx, 1); else selectedThemen.push(t);
+        render();
+      });
+    });
+  }
+  render();
+
+  addBtn.addEventListener('click', () => {
+    const val = addInput.value.trim();
+    if (!val) return;
+    if (!DATA.themenVokabular.includes(val)) DATA.themenVokabular.push(val);
+    if (!selectedThemen.includes(val)) selectedThemen.push(val);
+    addInput.value = '';
+    render();
+  });
+  addInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+  });
+
+  return { getValues: () => selectedThemen.slice() };
+}
+
+/* =========================================================================
+   Formulare: Vorlagen & Verdrahtung
+   ========================================================================= */
+function formTemplate(type) {
+  if (type === 'akteure') return `
+    <div class="form-field">
+      <label for="f-name">Name <span class="req">*</span></label>
+      <input type="text" id="f-name" required>
+    </div>
+    <div class="form-field">
+      <label>Art</label>
+      <div class="radio-row">
+        <label><input type="radio" name="f-art" value="Person"> Person</label>
+        <label><input type="radio" name="f-art" value="Initiative"> Initiative</label>
+        <label><input type="radio" name="f-art" value="Institution"> Institution</label>
+      </div>
+    </div>
+    <div class="form-field">
+      <label for="f-zu">Gehört zu</label>
+      <input type="text" id="f-zu" list="akteurNamesList" placeholder="Name einer Institution/Initiative …">
+    </div>
+    <div class="form-field">
+      <label for="f-ort">Ort</label>
+      <input type="text" id="f-ort">
+    </div>
+    <div class="form-field" id="f-themen-field">
+      <label>Themen</label>
+      <div class="theme-picker"></div>
+      <div class="theme-add-row">
+        <input type="text" class="theme-add-input" placeholder="Neues Thema …">
+        <button type="button" class="btn theme-add-btn">+</button>
+      </div>
+    </div>
+    <div class="form-field">
+      <label for="f-web">Web</label>
+      <input type="text" id="f-web" placeholder="ohne https://">
+    </div>
+    <div class="form-field">
+      <label for="f-notiz">Notiz</label>
+      <textarea id="f-notiz"></textarea>
+    </div>
+    <div class="form-field checkbox-field">
+      <input type="checkbox" id="f-zusammenarbeit">
+      <label for="f-zusammenarbeit">Zusammenarbeit (manuell, ohne eigene Veranstaltung)</label>
+    </div>
+    <div class="form-field">
+      <label for="f-quelle">Quelle</label>
+      <input type="text" id="f-quelle">
+    </div>`;
+
+  if (type === 'veranstaltungen') return `
+    <div class="form-field">
+      <label for="f-titel">Titel <span class="req">*</span></label>
+      <input type="text" id="f-titel" required>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="f-datum">Datum <span class="req">*</span></label>
+        <input type="date" id="f-datum" required>
+      </div>
+      <div class="form-field">
+        <label for="f-bis">Bis</label>
+        <input type="date" id="f-bis">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="f-zeit">Zeit</label>
+        <input type="text" id="f-zeit" placeholder="z. B. 19-20, ab 18">
+      </div>
+      <div class="form-field">
+        <label for="f-ort">Ort</label>
+        <input type="text" id="f-ort">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="f-format">Format</label>
+        <input type="text" id="f-format" list="formatList" placeholder="Spaziergang, Lesekreis …">
+      </div>
+      <div class="form-field">
+        <label for="f-reihe">Reihe</label>
+        <input type="text" id="f-reihe" list="reiheList">
+      </div>
+    </div>
+    <div class="form-field checkbox-field">
+      <input type="checkbox" id="f-eigene">
+      <label for="f-eigene">Eigene Veranstaltung</label>
+    </div>
+    <div class="form-field">
+      <label>Beteiligte</label>
+      <div class="sub-rows" id="f-beteiligte"></div>
+    </div>
+    <div class="form-field">
+      <label for="f-beschrieb">Beschrieb</label>
+      <textarea id="f-beschrieb"></textarea>
+    </div>
+    <div class="form-field">
+      <label for="f-quelle">Quelle</label>
+      <input type="text" id="f-quelle">
+    </div>`;
+
+  return `
+    <div class="form-field">
+      <label for="f-titel">Titel <span class="req">*</span></label>
+      <input type="text" id="f-titel" required>
+    </div>
+    <div class="form-field">
+      <label for="f-text">Text</label>
+      <textarea id="f-text"></textarea>
+    </div>
+    <div class="form-field">
+      <label>Akteure</label>
+      <div class="sub-rows" id="f-akteure"></div>
+    </div>
+    <div class="form-field">
+      <label>Veranstaltungen</label>
+      <div class="sub-rows" id="f-veranstaltungen"></div>
+    </div>`;
+}
+
+function wireAkteurForm(item) {
+  $('f-name').value = item.name || '';
+  (document.querySelectorAll('input[name="f-art"]') || []).forEach(r => { r.checked = r.value === (item.art || 'Person'); });
+  $('f-zu').value = item.zu ? (akteurName(item.zu) || '') : '';
+  $('f-ort').value = item.ort || '';
+  $('f-web').value = item.web || '';
+  $('f-notiz').value = item.notiz || '';
+  $('f-zusammenarbeit').checked = !!item.zusammenarbeit;
+  $('f-quelle').value = item.quelle || '';
+  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
+
+  return () => ({
+    name: $('f-name').value.trim(),
+    art: document.querySelector('input[name="f-art"]:checked')?.value || 'Person',
+    zu: resolveOrCreateAkteur($('f-zu').value, 'Institution') || '',
+    ort: $('f-ort').value.trim(),
+    themen: themePicker.getValues(),
+    web: $('f-web').value.trim().replace(/^https?:\/\//, ''),
+    notiz: $('f-notiz').value.trim(),
+    zusammenarbeit: $('f-zusammenarbeit').checked,
+    quelle: $('f-quelle').value.trim(),
+  });
+}
+
+function wireVeranstaltungForm(item) {
+  ensureHilfsDatalisten();
+  $('f-titel').value = item.titel || '';
+  $('f-datum').value = item.datum || '';
+  $('f-bis').value = item.bis || '';
+  $('f-zeit').value = item.zeit || '';
+  $('f-ort').value = item.ort || '';
+  $('f-format').value = item.format || '';
+  $('f-reihe').value = item.reihe || '';
+  $('f-eigene').checked = !!item.eigene;
+  const beteiligteRows = (item.beteiligte || []).map(b => ({ name: akteurName(b.id) || '', rolle: b.rolle || '' }));
+  const beteiligteEditor = buildSubRowsEditor($('f-beteiligte'), beteiligteRows,
+    [{ key: 'name', placeholder: 'Name', list: 'akteurNamesList' }, { key: 'rolle', placeholder: 'Rolle', list: 'roleList' }],
+    '+ Beteiligte/r');
+  $('f-beschrieb').value = item.beschrieb || '';
+  $('f-quelle').value = item.quelle || '';
+
+  return () => ({
+    titel: $('f-titel').value.trim(),
+    datum: $('f-datum').value,
+    bis: $('f-bis').value,
+    zeit: $('f-zeit').value.trim(),
+    ort: $('f-ort').value.trim(),
+    format: $('f-format').value.trim(),
+    reihe: $('f-reihe').value.trim(),
+    eigene: $('f-eigene').checked,
+    beteiligte: beteiligteEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), rolle: r.rolle })).filter(r => r.id),
+    beschrieb: $('f-beschrieb').value.trim(),
+    quelle: $('f-quelle').value.trim(),
+  });
+}
+
+function wireIdeeForm(item, opts) {
+  ensureHilfsDatalisten();
+  $('f-titel').value = item.titel || '';
+  $('f-text').value = item.text || '';
+  let akteureRows = (item.akteure || []).map(a => ({ name: akteurName(a.id) || '', warum: a.warum || '' }));
+  if (!akteureRows.length && opts && opts.prefillAkteur) {
+    akteureRows = [{ name: akteurName(opts.prefillAkteur) || '', warum: '' }];
+  }
+  const akteureEditor = buildSubRowsEditor($('f-akteure'), akteureRows,
+    [{ key: 'name', placeholder: 'Name', list: 'akteurNamesList' }, { key: 'warum', placeholder: 'Warum' }],
+    '+ Akteur');
+  const veranstaltungenRows = (item.veranstaltungen || [])
+    .map(vid => { const v = DATA.veranstaltungen[vid]; return v && !v.deleted ? { name: v.titel } : null; })
+    .filter(Boolean);
+  const veranstaltungenEditor = buildSubRowsEditor($('f-veranstaltungen'), veranstaltungenRows,
+    [{ key: 'name', placeholder: 'Titel der Veranstaltung', list: 'veranstaltungTitelList' }],
+    '+ Veranstaltung');
+
+  return () => ({
+    titel: $('f-titel').value.trim(),
+    text: $('f-text').value.trim(),
+    akteure: akteureEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), warum: r.warum })).filter(r => r.id),
+    veranstaltungen: veranstaltungenEditor.getValues()
+      .map(r => Store.list('veranstaltungen').find(v => normalize(v.titel) === normalize(r.name))?.id)
+      .filter(Boolean),
+  });
+}
+
+function openForm(type, id, opts = {}) {
+  const isNew = !id;
+  const item = isNew ? {} : Store.get(type, id);
+  if (!isNew && !item) return;
+  ensureAkteurDatalist();
+
+  const typeNounNeu = { akteure: 'Neuer Akteur', veranstaltungen: 'Neue Veranstaltung', ideen: 'Neue Idee' };
+  $('formEyebrow').textContent = (isNew ? 'Neu' : 'Bearbeiten') + ' · ' + TYPE_LABEL[type];
+  $('formTitle').textContent = isNew ? typeNounNeu[type] : (type === 'akteure' ? item.name : item.titel);
+
+  const body = $('formBody');
+  body.innerHTML = formTemplate(type);
+
+  const collect = type === 'akteure' ? wireAkteurForm(item)
+    : type === 'veranstaltungen' ? wireVeranstaltungForm(item)
+    : wireIdeeForm(item, opts);
+
+  renderFormFoot(type, isNew ? null : id, collect, isNew);
+
+  body.onsubmit = (e) => {
+    e.preventDefault();
+    const fields = collect();
+    const wasNew = isNew;
+    const savedId = Store.put(type, isNew ? null : id, fields);
+    closeForm();
+    renderAll();
+    if (wasNew) openDetail(type, savedId);
+    else refreshDetailIfShowing(type, savedId);
+    announce(`${TYPE_LABEL[type]} gespeichert`);
+  };
+
+  if (!$('formDialog').open) $('formDialog').showModal();
+  body.querySelector('input, textarea').focus();
+}
+
+function renderFormFoot(type, id, collect, isNew) {
+  const foot = $('formFoot');
+  foot.innerHTML = '';
+
+  if (!isNew) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.type = 'button';
+    delBtn.textContent = 'Löschen';
+    attachDeleteButton(delBtn, type, id, () => {
+      closeForm();
+      closeDetail();
+      renderAll();
+    });
+    foot.appendChild(delBtn);
+  }
+
+  foot.appendChild(Object.assign(document.createElement('div'), { className: 'btn-spacer' }));
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-ghost';
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Abbrechen';
+  cancelBtn.addEventListener('click', closeForm);
+  foot.appendChild(cancelBtn);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary';
+  saveBtn.type = 'submit';
+  saveBtn.setAttribute('form', '');
+  saveBtn.textContent = 'Speichern';
+  saveBtn.addEventListener('click', (e) => {
+    // Formular liegt ausserhalb des Footers im DOM -> submit manuell auslösen
+    e.preventDefault();
+    $('formBody').requestSubmit();
+  });
+  foot.appendChild(saveBtn);
+}
+
+function closeForm() {
+  if ($('formDialog').open) $('formDialog').close();
+}
+
+/* =========================================================================
+   GitHub-Sync (Contents API, Daten-Repo)
+   ========================================================================= */
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+function base64ToUtf8(b64) {
+  const binary = atob(b64);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function contentsUrl(cfg) {
+  return `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${cfg.path.split('/').map(encodeURIComponent).join('/')}`;
+}
+
+async function githubGet(cfg) {
+  const r = await fetch(contentsUrl(cfg), {
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    cache: 'no-store',
+  });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GET ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const data = await r.json();
+  const payload = JSON.parse(base64ToUtf8(data.content));
+  return { payload, sha: data.sha };
+}
+
+async function githubPut(cfg, payload, sha) {
+  const body = {
+    message: `Sync ${nowISO()}`,
+    content: utf8ToBase64(JSON.stringify(payload, null, 1)),
+  };
+  if (sha) body.sha = sha;
+  const r = await fetch(contentsUrl(cfg), {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const err = new Error(`PUT ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    err.status = r.status;
+    throw err;
+  }
+  const data = await r.json();
+  return data.content.sha;
+}
+
+// Zusammenführen nach ID: pro Eintrag gewinnt der neuere `modified`-Zeitstempel.
+// Gelöschte Einträge (Tombstones) wandern mit, damit Löschungen sich über Geräte
+// hinweg durchsetzen, statt beim nächsten Sync wiederzukehren.
+function mergeCollectionInto(type, incoming) {
+  let added = 0, updated = 0;
+  Object.entries(incoming || {}).forEach(([id, obj]) => {
+    const local = DATA[type][id];
+    if (!local) { DATA[type][id] = obj; if (!obj.deleted) added++; return; }
+    if ((obj.modified || '') > (local.modified || '')) { DATA[type][id] = obj; updated++; }
+  });
+  return { added, updated };
+}
+
+function mergeIncomingPayload(payload) {
+  const stats = { added: 0, updated: 0 };
+  ['akteure', 'veranstaltungen', 'ideen'].forEach(type => {
+    const r = mergeCollectionInto(type, payload[type]);
+    stats.added += r.added; stats.updated += r.updated;
+  });
+  if (Array.isArray(payload.themenVokabular)) {
+    payload.themenVokabular.forEach(t => { if (t && !DATA.themenVokabular.includes(t)) DATA.themenVokabular.push(t); });
+  }
+  return stats;
+}
+
+function currentPayload() {
+  return {
+    version: 1,
+    updated: nowISO(),
+    themenVokabular: DATA.themenVokabular,
+    akteure: DATA.akteure,
+    veranstaltungen: DATA.veranstaltungen,
+    ideen: DATA.ideen,
+  };
+}
+
+function setSyncStatus(state, hint) {
+  const dot = $('syncDot');
+  dot.className = 'sync-dot ' + state;
+  const titles = {
+    idle: 'Synchronisiert · tippen für manuellen Sync',
+    syncing: 'Synchronisiert gerade …',
+    error: 'Sync-Fehler · tippen für erneuten Versuch',
+    off: 'Sync nicht eingerichtet · auf ⚙ tippen',
+  };
+  $('btnSync').title = hint || titles[state] || '';
+  const statusEl = $('syncSettingsStatus');
+  if (state === 'error' && hint) { statusEl.textContent = hint; statusEl.className = 'settings-status err'; }
+  else if (state === 'idle') { statusEl.textContent = 'Verbunden und synchronisiert.'; statusEl.className = 'settings-status ok'; }
+}
+
+async function syncNow() {
+  if (!syncConfig) return;
+  if (syncInFlight) return;
+  syncInFlight = true;
+  setSyncStatus('syncing');
+  try {
+    let attempt = 0;
+    while (attempt < 2) {
+      attempt++;
+      const remote = await githubGet(syncConfig);
+      if (remote) {
+        mergeIncomingPayload(remote.payload);
+        remoteSha = remote.sha;
+      }
+      try {
+        remoteSha = await githubPut(syncConfig, currentPayload(), remoteSha);
+        break;
+      } catch (e) {
+        if (e.status === 409 && attempt < 2) continue; // Konflikt: neu holen & erneut versuchen
+        throw e;
+      }
+    }
+    localStorage.setItem(SHA_KEY, remoteSha || '');
+    saveLocal();
+    renderAll();
+    setSyncStatus('idle');
+  } catch (e) {
+    console.error('Sync-Fehler', e);
+    setSyncStatus('error', e.message);
+  } finally {
+    syncInFlight = false;
+  }
+}
+
+/* =========================================================================
+   Export / Import
+   ========================================================================= */
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportData() {
+  downloadJSON(`feld-export-${todayISO()}.json`, currentPayload());
+}
+
+function downloadTemplate() {
+  const tpl = {
+    _hinweis: 'Vorlage für den Feld-Import. Dieser Schlüssel wird beim Import ignoriert. ' +
+      'akteure/veranstaltungen/ideen sind Objekte, Schlüssel = frei wählbare ID. ' +
+      'Beim Import gewinnt pro ID der neuere Eintrag (anhand "modified"), neue IDs werden ergänzt.',
+    themenVokabular: THEMEN_KERN,
+    akteure: {
+      'beispiel-id': {
+        name: 'Pflichtfeld: Name der Person/Initiative/Institution',
+        art: 'Person | Initiative | Institution',
+        zu: 'ID eines anderen Akteurs, oder leer',
+        ort: '', themen: ['Thema aus dem Vokabular'], web: '', notiz: '',
+        zusammenarbeit: false, quelle: '', modified: 'ISO-Zeitstempel, optional',
+      },
+    },
+    veranstaltungen: {
+      'beispiel-id': {
+        titel: 'Pflichtfeld', datum: 'YYYY-MM-DD, Pflichtfeld', bis: '', zeit: '', ort: '',
+        format: '', reihe: '', eigene: false,
+        beteiligte: [{ id: 'akteur-id', rolle: 'veranstaltend' }],
+        beschrieb: '', quelle: '', modified: 'ISO-Zeitstempel, optional',
+      },
+    },
+    ideen: {
+      'beispiel-id': {
+        titel: 'Pflichtfeld', text: '',
+        akteure: [{ id: 'akteur-id', warum: '' }],
+        veranstaltungen: ['veranstaltung-id'],
+        erstellt: 'YYYY-MM-DD', modified: 'ISO-Zeitstempel, optional',
+      },
+    },
+  };
+  downloadJSON('feld-import-vorlage.json', tpl);
+}
+
+function importFile(file) {
+  const statusEl = $('importStatus');
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      if (!payload || typeof payload !== 'object' || (!payload.akteure && !payload.veranstaltungen && !payload.ideen)) {
+        throw new Error('Datei enthält keine erkennbaren Feld-Daten (akteure/veranstaltungen/ideen).');
+      }
+      const stats = mergeIncomingPayload(payload);
+      saveLocal();
+      renderAll();
+      statusEl.className = 'settings-status ok';
+      statusEl.textContent = `Import erfolgreich: ${stats.added} neu, ${stats.updated} aktualisiert.`;
+    } catch (e) {
+      statusEl.className = 'settings-status err';
+      statusEl.textContent = 'Import fehlgeschlagen: ' + e.message;
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* =========================================================================
+   Themenvokabular-Verwaltung (Einstellungen)
+   ========================================================================= */
+function renderThemaVocabSettings() {
+  $('themaVocabList').innerHTML = DATA.themenVokabular
+    .map(t => `<span class="chip" aria-pressed="false" style="cursor:default">${escapeHtml(t)}</span>`).join('');
+}
+
+/* =========================================================================
+   Init / Event-Verdrahtung
+   ========================================================================= */
+function wireTabs() {
+  ['verzeichnis', 'agenda', 'ideen'].forEach(v => {
+    $('tab-' + v).addEventListener('click', () => switchView(v));
+  });
+}
+
+function wireFilters() {
+  $('artFilter').querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const art = chip.dataset.art;
+      const pressed = chip.getAttribute('aria-pressed') === 'true';
+      chip.setAttribute('aria-pressed', String(!pressed));
+      if (pressed) filterArt.delete(art); else filterArt.add(art);
+      renderVerzeichnis();
+    });
+  });
+  $('themaFilter').addEventListener('change', () => {
+    filterThema = $('themaFilter').value;
+    renderVerzeichnis();
+  });
+  $('zusammenarbeitFilter').addEventListener('change', () => {
+    filterZusammenarbeit = $('zusammenarbeitFilter').checked;
+    renderVerzeichnis();
+  });
+
+  $('eigeneFilter').querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      filterEigene = chip.dataset.eigene;
+      $('eigeneFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+      renderAgenda();
+    });
+  });
+  $('zeitFilter').querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      filterZeit = chip.dataset.zeit;
+      $('zeitFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+      renderAgenda();
+    });
+  });
+}
+
+function wireSearch() {
+  const input = $('searchInput');
+  const wrap = $('searchForm');
+  const doSearch = debounce(() => {
+    searchQuery = input.value;
+    wrap.classList.toggle('has-value', !!searchQuery);
+    renderAll();
+  }, 120);
+  input.addEventListener('input', doSearch);
+  $('searchClear').addEventListener('click', () => {
+    input.value = '';
+    searchQuery = '';
+    wrap.classList.remove('has-value');
+    renderAll();
+    input.focus();
+  });
+  wrap.addEventListener('submit', e => e.preventDefault());
+}
+
+function wireNewPicker() {
+  $('btnNew').addEventListener('click', () => { if (!$('pickerDialog').open) $('pickerDialog').showModal(); });
+  $('pickerClose').addEventListener('click', () => $('pickerDialog').close());
+  $('pickerDialog').querySelectorAll('.picker-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = { akteur: 'akteure', veranstaltung: 'veranstaltungen', idee: 'ideen' }[btn.dataset.type];
+      $('pickerDialog').close();
+      openForm(type, null);
+    });
+  });
+}
+
+function wireDialogs() {
+  $('detailClose').addEventListener('click', closeDetail);
+  $('detailDialog').addEventListener('close', () => { dialogStack = []; currentDetail = null; });
+  $('detailBack').addEventListener('click', () => {
+    if (!dialogStack.length) return;
+    const prev = dialogStack.pop();
+    openDetail(prev.type, prev.id, { viaBack: true });
+  });
+  $('formClose').addEventListener('click', closeForm);
+}
+
+function wireSettings() {
+  $('btnSettings').addEventListener('click', () => {
+    if (syncConfig) {
+      $('cfg-owner').value = syncConfig.owner || '';
+      $('cfg-repo').value = syncConfig.repo || '';
+      $('cfg-path').value = syncConfig.path || '';
+      $('cfg-token').value = syncConfig.token || '';
+    }
+    renderThemaVocabSettings();
+    $('syncSettingsStatus').textContent = syncConfig ? '' : 'Noch nicht verbunden.';
+    $('syncSettingsStatus').className = 'settings-status';
+    if (!$('settingsDialog').open) $('settingsDialog').showModal();
+  });
+  $('settingsClose').addEventListener('click', () => $('settingsDialog').close());
+
+  $('btnSync').addEventListener('click', () => {
+    if (!syncConfig) { $('btnSettings').click(); return; }
+    syncNow();
+  });
+
+  $('btnSaveSync').addEventListener('click', () => {
+    const owner = $('cfg-owner').value.trim();
+    const repo = $('cfg-repo').value.trim();
+    const path = $('cfg-path').value.trim() || 'feld-daten.json';
+    const token = $('cfg-token').value.trim();
+    if (!owner || !repo || !token) {
+      $('syncSettingsStatus').className = 'settings-status err';
+      $('syncSettingsStatus').textContent = 'Benutzername, Repository und Token sind nötig.';
+      return;
+    }
+    syncConfig = { owner, repo, path, token };
+    saveSyncConfig();
+    syncNow();
+  });
+  $('btnDisconnectSync').addEventListener('click', () => {
+    syncConfig = null;
+    saveSyncConfig();
+    remoteSha = null;
+    localStorage.removeItem(SHA_KEY);
+    setSyncStatus('off');
+    $('syncSettingsStatus').textContent = 'Getrennt. Daten bleiben lokal erhalten.';
+    $('syncSettingsStatus').className = 'settings-status';
+  });
+
+  $('themaVocabAdd').addEventListener('click', () => {
+    const val = $('themaVocabInput').value.trim();
+    if (!val) return;
+    if (!DATA.themenVokabular.includes(val)) {
+      DATA.themenVokabular.push(val);
+      saveLocal();
+      renderThemaVocabSettings();
+      populateThemaFilter();
+    }
+    $('themaVocabInput').value = '';
+  });
+  $('themaVocabInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); $('themaVocabAdd').click(); }
+  });
+
+  $('btnExport').addEventListener('click', exportData);
+  $('btnTemplate').addEventListener('click', downloadTemplate);
+  $('btnImport').addEventListener('click', () => $('importFile').click());
+  $('importFile').addEventListener('change', () => {
+    const file = $('importFile').files[0];
+    if (file) importFile(file);
+    $('importFile').value = '';
+  });
+}
+
+function wireKeyboard() {
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+    const anyDialogOpen = ['detailDialog', 'formDialog', 'pickerDialog', 'settingsDialog'].some(id => $(id).open);
+
+    if (e.key === '/' && !isTyping && !anyDialogOpen) {
+      e.preventDefault();
+      $('searchInput').focus();
+      return;
+    }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !isTyping && !anyDialogOpen) {
+      const order = ['verzeichnis', 'agenda', 'ideen'];
+      const idx = order.indexOf(currentView);
+      const next = order[(idx + (e.key === 'ArrowRight' ? 1 : -1) + order.length) % order.length];
+      e.preventDefault();
+      switchView(next, { focus: true });
+    }
+  });
+}
+
+function init() {
+  loadLocal();
+  wireTabs();
+  wireFilters();
+  wireSearch();
+  wireNewPicker();
+  wireDialogs();
+  wireSettings();
+  wireKeyboard();
+
+  const savedTab = localStorage.getItem(TAB_KEY);
+  if (savedTab && TAB_TYPE[savedTab]) currentView = savedTab;
+  switchView(currentView);
+
+  setSyncStatus(syncConfig ? 'idle' : 'off');
+  renderAll();
+
+  if (syncConfig) syncNow();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
