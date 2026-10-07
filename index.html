@@ -140,7 +140,7 @@ header {
   border-radius: 50%;
   background: var(--text-dimmer);
 }
-.sync-dot.synced { background: #4ade80; }
+.sync-dot.idle { background: #4ade80; }
 .sync-dot.syncing { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
 .sync-dot.error { background: var(--danger); }
 @media (prefers-reduced-motion: no-preference) {
@@ -302,6 +302,16 @@ select.filter-select {
   gap: 4px 8px;
 }
 .row-themes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.row-notiz {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.row-notiz-full { display: block; }
 .theme-tag {
   font-size: 11px;
   color: var(--text-dim);
@@ -360,40 +370,50 @@ select.filter-select {
   padding: 0 5px;
 }
 
-/* ---------- Ideen Karten ---------- */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
-}
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text);
+/* ---------- Ideen-Liste ---------- */
+.idee-row { cursor: pointer; }
+.idee-row.dragging { opacity: 0.4; }
+.idee-row.drag-over-top { box-shadow: inset 0 2px 0 var(--accent); }
+.idee-row.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
+.drag-handle { cursor: grab; color: var(--text-dimmer); }
+.row-controls { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.row-controls .icon-btn { width: 24px; height: 24px; }
+
+.ordner-header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 4px;
 }
-.card:hover { border-color: var(--text-dimmer); }
-.card-title { font-weight: 600; }
-.card-text {
-  font-size: 13px;
-  color: var(--text-dim);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.card-actors {
+.ordner-header .ordner-name {
   font-size: 12px;
+  font-weight: 700;
   color: var(--text-dimmer);
-  margin-top: auto;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
-.card-date { font-size: 11.5px; color: var(--text-dimmer); }
+.ordner-header .ordner-count { font-size: 11px; color: var(--text-dimmer); }
+.ordner-header .ordner-actions { margin-left: auto; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.ordner-header .ordner-actions .btn-danger { padding: 3px 10px; font-size: 11.5px; }
+.ordner-header .ordner-actions .warn-box { flex-basis: 100%; margin: 4px 0 0; }
+.ordner-header.drag-over { background: var(--surface); border-radius: 8px; outline: 1px dashed var(--accent); }
+.ordner-rename-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font: inherit;
+  color: inherit;
+}
+.ordner-add-inline { display: inline-flex; gap: 6px; }
+.ordner-add-inline input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: var(--text);
+  font-size: 13.5px;
+}
 
 /* ---------- Dialoge ---------- */
 dialog {
@@ -500,6 +520,7 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   color: var(--text);
 }
 .form-field textarea { resize: vertical; min-height: 60px; }
+.form-field-hint { font-size: 11px; color: var(--text-dimmer); margin-top: 3px; text-align: right; }
 .form-row { display: flex; gap: 10px; }
 .form-row .form-field { flex: 1; }
 .radio-row { display: flex; gap: 14px; flex-wrap: wrap; }
@@ -511,9 +532,9 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
 
 .theme-picker { display: flex; flex-wrap: wrap; gap: 6px; }
 .theme-picker .chip { font-size: 12.5px; padding: 4px 10px; }
-.theme-add-row { display: flex; gap: 6px; margin-top: 8px; }
-.theme-add-row input { flex: 1; }
-.theme-add-row button { flex-shrink: 0; }
+.theme-add-row, .ordner-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.theme-add-row input, .ordner-add-row input { flex: 1; }
+.theme-add-row button, .ordner-add-row button { flex-shrink: 0; }
 
 .sub-rows { display: flex; flex-direction: column; gap: 7px; }
 .sub-row {
@@ -690,7 +711,23 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   </section>
 
   <section class="view" id="view-ideen" role="tabpanel" aria-labelledby="tab-ideen" tabindex="0" hidden>
-    <div class="cards" id="ideenList"></div>
+    <div class="toolbar">
+      <div class="chip-group" id="ideenSortFilter" role="group" aria-label="Sortierung">
+        <button class="chip" data-sort="neu" aria-pressed="true">Neu</button>
+        <button class="chip" data-sort="alt" aria-pressed="false">Alt</button>
+        <button class="chip" data-sort="az" aria-pressed="false">A-Z</button>
+        <button class="chip" data-sort="manuell" aria-pressed="false">Manuell</button>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <div id="ordnerAddToolbar">
+        <button class="btn btn-ghost" type="button" id="btnNeuerOrdner">+ Ordner</button>
+        <span class="ordner-add-inline" id="ordnerAddInline" hidden>
+          <input type="text" id="ordnerAddInlineInput" placeholder="Name des Ordners …">
+          <button class="btn btn-primary" type="button" id="ordnerAddInlineConfirm">Erstellen</button>
+        </span>
+      </div>
+    </div>
+    <div class="list" id="ideenList"></div>
   </section>
 
 </main>
@@ -830,7 +867,10 @@ const THEMEN_KERN = ['Spaziergangswissenschaft','Literatur','Kunst','Architektur
 
 const EIGENE_IDS = ['vspw', 'lokal']; // eigene Organisationen, siehe KONZEPT 5.3 „ohne Verein, Lokal …"
 
-let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, themenVokabular: THEMEN_KERN.slice() };
+const KURZNOTIZ_MAXLEN = 100;
+const IDEEN_SORT_KEY = 'feld_ideen_sort_v1';
+
+let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, ideenOrdner: {}, themenVokabular: THEMEN_KERN.slice() };
 let syncConfig = null;
 let remoteSha = null;
 let syncInFlight = false;
@@ -847,6 +887,10 @@ let filterZusammenarbeit = false;
 let filterEigene = 'alle';   // alle | eigene | dritte
 let filterZeit = 'alle';     // alle | anstehend | vergangen
 
+// Ideen-Sortierung & Drag&Drop
+let ideenSort = 'neu';       // neu | alt | az | manuell
+let dragIdeeId = null;
+
 /* =========================================================================
    Utilities
    ========================================================================= */
@@ -856,7 +900,7 @@ function uid(name) {
   const slug = slugify(name).slice(0, 22) || 'eintrag';
   const suffix = Math.random().toString(36).slice(2, 6);
   let id = `${slug}-${suffix}`;
-  while (DATA.akteure[id] || DATA.veranstaltungen[id] || DATA.ideen[id]) {
+  while (DATA.akteure[id] || DATA.veranstaltungen[id] || DATA.ideen[id] || DATA.ideenOrdner[id]) {
     id = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
   }
   return id;
@@ -923,6 +967,7 @@ function loadLocal() {
       DATA.akteure = parsed.akteure || {};
       DATA.veranstaltungen = parsed.veranstaltungen || {};
       DATA.ideen = parsed.ideen || {};
+      DATA.ideenOrdner = parsed.ideenOrdner || {};
       DATA.themenVokabular = (Array.isArray(parsed.themenVokabular) && parsed.themenVokabular.length)
         ? parsed.themenVokabular : THEMEN_KERN.slice();
     }
@@ -944,6 +989,7 @@ function saveLocal() {
     akteure: DATA.akteure,
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
+    ideenOrdner: DATA.ideenOrdner,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -971,7 +1017,7 @@ const Store = {
   put(type, id, fields) {
     const isNew = !id;
     if (isNew) {
-      const nameField = type === 'akteure' ? fields.name : fields.titel;
+      const nameField = (type === 'akteure' || type === 'ideenOrdner') ? fields.name : fields.titel;
       id = uid(nameField);
     }
     const existing = DATA[type][id] || {};
@@ -1054,6 +1100,9 @@ function referencingFor(type, id) {
     const b = veranstaltungBackrefs(id);
     return b.ideen.map(x => `Idee „${x.titel}"`);
   }
+  if (type === 'ideenOrdner') {
+    return Store.list('ideen').filter(i => i.ordner === id).map(i => `Idee „${i.titel}"`);
+  }
   return [];
 }
 
@@ -1083,6 +1132,13 @@ function stripReferencesTo(type, id) {
       i.modified = nowISO();
     });
   }
+  if (type === 'ideenOrdner') {
+    Object.entries(DATA.ideen).forEach(([iid, i]) => {
+      if (i.deleted || i.ordner !== id) return;
+      i.ordner = '';
+      i.modified = nowISO();
+    });
+  }
 }
 
 function deleteWithIntegrity(type, id) {
@@ -1109,7 +1165,7 @@ function getSearchWords() {
 
 function haystackFor(type, item) {
   if (type === 'akteure') {
-    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.notiz, item.web, akteurName(item.zu)];
+    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.kurznotiz, item.notiz, item.web, akteurName(item.zu)];
   }
   if (type === 'veranstaltungen') {
     const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
@@ -1118,7 +1174,8 @@ function haystackFor(type, item) {
   if (type === 'ideen') {
     const namen = (item.akteure || []).map(a => akteurName(a.id));
     const warums = (item.akteure || []).map(a => a.warum);
-    return [item.titel, item.text, ...namen, ...warums];
+    const ordnerName = item.ordner ? (DATA.ideenOrdner[item.ordner] || {}).name : '';
+    return [item.titel, item.text, ...namen, ...warums, ordnerName];
   }
   return [];
 }
@@ -1209,6 +1266,8 @@ function renderAkteurRow(a) {
         ${a.ort ? `<span>${escapeHtml(a.ort)}</span>` : ''}
       </span>
       ${(a.themen || []).length ? `<span class="row-themes">${a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join('')}</span>` : ''}
+      ${a.kurznotiz ? `<span class="row-notiz row-notiz-full">${escapeHtml(a.kurznotiz)}</span>`
+        : a.notiz ? `<span class="row-notiz">${escapeHtml(a.notiz)}</span>` : ''}
     </span>
     <span class="row-counts">${backrefs.veranstaltungen.length} Veranst.<br>${backrefs.ideen.length} Ideen</span>
   `;
@@ -1304,9 +1363,19 @@ function renderVeranstaltungRow(v, status) {
 /* =========================================================================
    Rendering: Ideen
    ========================================================================= */
+function compareIdeen(a, b, sort) {
+  if (sort === 'az') return a.titel.localeCompare(b.titel, 'de');
+  if (sort === 'alt') return (a.erstellt || '').localeCompare(b.erstellt || '');
+  if (sort === 'manuell') {
+    const ra = a.reihenfolge ?? Infinity, rb = b.reihenfolge ?? Infinity;
+    if (ra !== rb) return ra - rb;
+    return (b.erstellt || '').localeCompare(a.erstellt || '');
+  }
+  return (b.erstellt || '').localeCompare(a.erstellt || ''); // neu (Standard)
+}
+
 function renderIdeen() {
   let items = searchFilter('ideen', Store.list('ideen'));
-  items.sort((a, b) => (b.erstellt || '').localeCompare(a.erstellt || ''));
 
   const root = $('ideenList');
   root.innerHTML = '';
@@ -1319,23 +1388,202 @@ function renderIdeen() {
     return;
   }
 
-  items.forEach(i => root.appendChild(renderIdeeCard(i)));
+  const ordnerListe = Store.list('ideenOrdner').sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const groups = ordnerListe.length
+    ? [
+        ...ordnerListe.map(o => ({ id: o.id, name: o.name, items: items.filter(i => i.ordner === o.id) })),
+        { id: '', name: 'Ohne Ordner', items: items.filter(i => !i.ordner || !DATA.ideenOrdner[i.ordner] || DATA.ideenOrdner[i.ordner].deleted) },
+      ]
+    : [{ id: '', name: null, items }];
+
+  groups.forEach(g => {
+    g.items.sort((a, b) => compareIdeen(a, b, ideenSort));
+    if (g.name) root.appendChild(renderOrdnerHeader(g));
+    g.items.forEach(i => root.appendChild(renderIdeeRow(i, g.id)));
+  });
+
   announce(`${items.length} ${pluralize(items.length, TAB_NOUN.ideen)}`);
 }
 
-function renderIdeeCard(i) {
-  const namen = (i.akteure || []).map(a => akteurName(a.id)).filter(Boolean);
-  const card = document.createElement('button');
-  card.className = 'card';
-  card.type = 'button';
-  card.innerHTML = `
-    <span class="card-title">${escapeHtml(i.titel)}</span>
-    ${i.text ? `<span class="card-text">${escapeHtml(i.text)}</span>` : ''}
-    ${namen.length ? `<span class="card-actors">${namen.map(escapeHtml).join(', ')}</span>` : ''}
-    <span class="card-date">${formatDate(i.erstellt)}</span>
+function renderOrdnerHeader(g) {
+  const header = document.createElement('div');
+  header.className = 'ordner-header';
+  header.dataset.ordner = g.id;
+  header.innerHTML = `
+    <span class="ordner-name">${escapeHtml(g.name)}</span>
+    <span class="ordner-count">(${g.items.length})</span>
+    <span class="ordner-actions"></span>
   `;
-  card.addEventListener('click', () => openDetail('ideen', i.id));
-  return card;
+  if (g.id) {
+    const actions = header.querySelector('.ordner-actions');
+    const renameBtn = document.createElement('button');
+    renameBtn.type = 'button';
+    renameBtn.className = 'icon-btn';
+    renameBtn.title = 'Ordner umbenennen';
+    renameBtn.setAttribute('aria-label', 'Ordner umbenennen');
+    renameBtn.textContent = '✎';
+    renameBtn.addEventListener('click', () => renameOrdnerInline(header, g.id));
+    actions.appendChild(renameBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-danger';
+    delBtn.textContent = 'Löschen';
+    attachDeleteButton(delBtn, 'ideenOrdner', g.id, () => renderIdeen());
+    actions.appendChild(delBtn);
+  }
+  header.addEventListener('dragover', e => {
+    if (!dragIdeeId) return;
+    e.preventDefault();
+    header.classList.add('drag-over');
+  });
+  header.addEventListener('dragleave', () => header.classList.remove('drag-over'));
+  header.addEventListener('drop', e => {
+    if (!dragIdeeId) return;
+    e.preventDefault();
+    header.classList.remove('drag-over');
+    const id = dragIdeeId;
+    dragIdeeId = null;
+    moveIdeeToPosition(id, g.id, null);
+  });
+  return header;
+}
+
+function renameOrdnerInline(headerEl, id) {
+  const o = DATA.ideenOrdner[id];
+  if (!o) return;
+  const nameEl = headerEl.querySelector('.ordner-name');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'ordner-rename-input';
+  input.value = o.name;
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  function commit() {
+    if (done) return;
+    done = true;
+    const val = input.value.trim();
+    if (val && val !== o.name) Store.put('ideenOrdner', id, { name: val });
+    renderIdeen();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); done = true; renderIdeen(); }
+  });
+}
+
+function renderIdeeRow(i, groupOrdnerId) {
+  const namen = (i.akteure || []).map(a => akteurName(a.id)).filter(Boolean);
+  const row = document.createElement('div');
+  row.className = 'row idee-row';
+  row.draggable = true;
+  row.dataset.id = i.id;
+  row.innerHTML = `
+    <span class="row-marker drag-handle" aria-hidden="true">⠿</span>
+    <span class="row-body">
+      <span class="row-top"><span class="row-name">${escapeHtml(i.titel)}</span></span>
+      ${i.text ? `<span class="row-meta row-notiz">${escapeHtml(i.text)}</span>` : ''}
+      ${namen.length ? `<span class="row-meta">${namen.map(escapeHtml).join(', ')}</span>` : ''}
+      <span class="row-meta"><span class="event-date">${formatDate(i.erstellt)}</span></span>
+    </span>
+    ${ideenSort === 'manuell' ? `
+    <span class="row-controls">
+      <button type="button" class="icon-btn move-up" title="Nach oben" aria-label="Nach oben">↑</button>
+      <button type="button" class="icon-btn move-down" title="Nach unten" aria-label="Nach unten">↓</button>
+    </span>` : ''}
+  `;
+  row.addEventListener('click', e => {
+    if (e.target.closest('button')) return;
+    openDetail('ideen', i.id);
+  });
+  const upBtn = row.querySelector('.move-up');
+  const downBtn = row.querySelector('.move-down');
+  if (upBtn) upBtn.addEventListener('click', e => { e.stopPropagation(); moveIdeeStep(i.id, -1); });
+  if (downBtn) downBtn.addEventListener('click', e => { e.stopPropagation(); moveIdeeStep(i.id, 1); });
+
+  row.addEventListener('dragstart', e => {
+    dragIdeeId = i.id;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', i.id);
+    row.classList.add('dragging');
+  });
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    document.querySelectorAll('.drag-over-top, .drag-over-bottom, .drag-over')
+      .forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom', 'drag-over'));
+    dragIdeeId = null;
+  });
+  row.addEventListener('dragover', e => {
+    if (ideenSort !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    row.classList.toggle('drag-over-top', before);
+    row.classList.toggle('drag-over-bottom', !before);
+  });
+  row.addEventListener('dragleave', () => row.classList.remove('drag-over-top', 'drag-over-bottom'));
+  row.addEventListener('drop', e => {
+    if (ideenSort !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
+    e.preventDefault();
+    const before = row.classList.contains('drag-over-top');
+    row.classList.remove('drag-over-top', 'drag-over-bottom');
+    const next = row.nextElementSibling;
+    const beforeId = before ? i.id : (next && next.classList.contains('idee-row') ? next.dataset.id : null);
+    const id = dragIdeeId;
+    dragIdeeId = null;
+    moveIdeeToPosition(id, groupOrdnerId, beforeId);
+  });
+  return row;
+}
+
+// Fügt `ideeId` in die Ordner-Gruppe `targetOrdnerId` ein (vor `beforeId`, oder am Ende
+// wenn `beforeId` leer ist) und nummeriert die ganze Zielgruppe neu durch (reihenfolge).
+function moveIdeeToPosition(ideeId, targetOrdnerId, beforeId) {
+  const idee = DATA.ideen[ideeId];
+  if (!idee || idee.deleted) return;
+  targetOrdnerId = targetOrdnerId || '';
+  const group = Store.list('ideen')
+    .filter(i => i.id !== ideeId && (i.ordner || '') === targetOrdnerId)
+    .sort((a, b) => compareIdeen(a, b, 'manuell'));
+  let insertAt = group.length;
+  if (beforeId) {
+    const idx = group.findIndex(i => i.id === beforeId);
+    if (idx > -1) insertAt = idx;
+  }
+  group.splice(insertAt, 0, { id: ideeId });
+  group.forEach((it, idx) => {
+    const step = (idx + 1) * 10;
+    const target = DATA.ideen[it.id];
+    if (!target) return;
+    if (target.reihenfolge !== step) target.reihenfolge = step;
+    target.modified = nowISO();
+  });
+  idee.ordner = targetOrdnerId;
+  saveLocal();
+  renderIdeen();
+}
+
+function moveIdeeStep(ideeId, direction) {
+  const idee = DATA.ideen[ideeId];
+  if (!idee) return;
+  const ordnerId = idee.ordner || '';
+  const group = Store.list('ideen')
+    .filter(i => (i.ordner || '') === ordnerId)
+    .sort((a, b) => compareIdeen(a, b, 'manuell'));
+  const idx = group.findIndex(i => i.id === ideeId);
+  const swapIdx = idx + direction;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= group.length) return;
+  [group[idx], group[swapIdx]] = [group[swapIdx], group[idx]];
+  group.forEach((it, i) => {
+    const step = (i + 1) * 10;
+    const target = DATA.ideen[it.id];
+    if (target.reihenfolge !== step) { target.reihenfolge = step; target.modified = nowISO(); }
+  });
+  saveLocal();
+  renderIdeen();
 }
 
 /* =========================================================================
@@ -1444,6 +1692,7 @@ function renderAkteurDetailBody(a) {
   html += fieldGroup('Ort', a.ort ? escapeHtml(a.ort) : '–', !a.ort);
   html += fieldGroup('Themen', (a.themen || []).length ? a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join(' ') : '–', !(a.themen || []).length);
   html += fieldGroup('Web', a.web ? webLink(a.web) : '–', !a.web);
+  html += fieldGroup('Kurznotiz', a.kurznotiz ? escapeHtml(a.kurznotiz) : '–', !a.kurznotiz);
   html += fieldGroup('Notiz', a.notiz ? escapeHtml(a.notiz) : '–', !a.notiz);
   if (a.quelle) html += fieldGroup('Quelle', escapeHtml(a.quelle));
 
@@ -1494,6 +1743,8 @@ function renderVeranstaltungDetailBody(v) {
 
 function renderIdeeDetailBody(i) {
   let html = '';
+  const ordnerName = i.ordner ? ((DATA.ideenOrdner[i.ordner] || {}).name) : '';
+  html += fieldGroup('Ordner', ordnerName ? escapeHtml(ordnerName) : '–', !ordnerName);
   html += fieldGroup('Text', i.text ? escapeHtml(i.text) : '–', !i.text);
 
   html += `<div class="field-group"><div class="field-label">Akteure (${(i.akteure || []).length})</div>`;
@@ -1569,7 +1820,7 @@ function attachDeleteButton(btn, type, id, onDeleted) {
         box.id = warnId;
         box.className = 'warn-box';
         box.innerHTML = `Wird noch verwendet in:<ul>${refs.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`;
-        btn.closest('.dialog-foot, form').insertAdjacentElement('beforebegin', box);
+        (btn.closest('.dialog-foot, form') || btn).insertAdjacentElement('beforebegin', box);
       }
       timer = setTimeout(reset, 6000);
     } else {
@@ -1750,6 +2001,11 @@ function formTemplate(type) {
       <input type="text" id="f-web" placeholder="ohne https://">
     </div>
     <div class="form-field">
+      <label for="f-kurznotiz">Kurznotiz <span style="font-weight:400">— erscheint vollständig in der Liste</span></label>
+      <input type="text" id="f-kurznotiz" maxlength="${KURZNOTIZ_MAXLEN}">
+      <div class="form-field-hint" id="f-kurznotiz-hint"></div>
+    </div>
+    <div class="form-field">
       <label for="f-notiz">Notiz</label>
       <textarea id="f-notiz"></textarea>
     </div>
@@ -1830,6 +2086,14 @@ function formTemplate(type) {
     <div class="form-field">
       <label>Veranstaltungen</label>
       <div class="sub-rows" id="f-veranstaltungen"></div>
+    </div>
+    <div class="form-field" id="f-ordner-field">
+      <label for="f-ordner">Ordner</label>
+      <select id="f-ordner"></select>
+      <div class="ordner-add-row">
+        <input type="text" class="ordner-add-input" placeholder="Neuer Ordner …">
+        <button type="button" class="btn ordner-add-btn">+</button>
+      </div>
     </div>`;
 }
 
@@ -1839,10 +2103,19 @@ function wireAkteurForm(item) {
   $('f-zu').value = item.zu ? (akteurName(item.zu) || '') : '';
   $('f-ort').value = item.ort || '';
   $('f-web').value = item.web || '';
+  $('f-kurznotiz').value = item.kurznotiz || '';
   $('f-notiz').value = item.notiz || '';
   $('f-zusammenarbeit').checked = !!item.zusammenarbeit;
   $('f-quelle').value = item.quelle || '';
   const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
+
+  const kurznotizInput = $('f-kurznotiz');
+  const kurznotizHint = $('f-kurznotiz-hint');
+  function updateKurznotizHint() {
+    kurznotizHint.textContent = `${kurznotizInput.value.length} / ${KURZNOTIZ_MAXLEN}`;
+  }
+  kurznotizInput.addEventListener('input', updateKurznotizHint);
+  updateKurznotizHint();
 
   return () => ({
     name: $('f-name').value.trim(),
@@ -1851,6 +2124,7 @@ function wireAkteurForm(item) {
     ort: $('f-ort').value.trim(),
     themen: themePicker.getValues(),
     web: $('f-web').value.trim().replace(/^https?:\/\//, ''),
+    kurznotiz: $('f-kurznotiz').value.trim(),
     notiz: $('f-notiz').value.trim(),
     zusammenarbeit: $('f-zusammenarbeit').checked,
     quelle: $('f-quelle').value.trim(),
@@ -1907,14 +2181,47 @@ function wireIdeeForm(item, opts) {
     [{ key: 'name', placeholder: 'Titel der Veranstaltung', list: 'veranstaltungTitelList' }],
     '+ Veranstaltung');
 
-  return () => ({
-    titel: $('f-titel').value.trim(),
-    text: $('f-text').value.trim(),
-    akteure: akteureEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), warum: r.warum })).filter(r => r.id),
-    veranstaltungen: veranstaltungenEditor.getValues()
-      .map(r => Store.list('veranstaltungen').find(v => normalize(v.titel) === normalize(r.name))?.id)
-      .filter(Boolean),
+  const ordnerSelect = $('f-ordner');
+  function refreshOrdnerOptions(selectedId) {
+    const keep = selectedId !== undefined ? selectedId : ordnerSelect.value;
+    ordnerSelect.innerHTML = '<option value="">Kein Ordner</option>' +
+      Store.list('ideenOrdner').sort((a, b) => a.name.localeCompare(b.name, 'de'))
+        .map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
+    ordnerSelect.value = keep || '';
+  }
+  refreshOrdnerOptions(item.ordner || '');
+  const ordnerField = $('f-ordner-field');
+  const ordnerAddInput = ordnerField.querySelector('.ordner-add-input');
+  const ordnerAddBtn = ordnerField.querySelector('.ordner-add-btn');
+  ordnerAddBtn.addEventListener('click', () => {
+    const val = ordnerAddInput.value.trim();
+    if (!val) return;
+    const id = Store.put('ideenOrdner', null, { name: val });
+    ordnerAddInput.value = '';
+    refreshOrdnerOptions(id);
   });
+  ordnerAddInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); ordnerAddBtn.click(); }
+  });
+
+  return () => {
+    const ordner = ordnerSelect.value || '';
+    let reihenfolge = item.reihenfolge;
+    if (reihenfolge == null) {
+      const siblings = Store.list('ideen').filter(i => (i.ordner || '') === ordner && i.id !== item.id);
+      reihenfolge = siblings.length ? Math.max(...siblings.map(s => s.reihenfolge || 0)) + 10 : 10;
+    }
+    return {
+      titel: $('f-titel').value.trim(),
+      text: $('f-text').value.trim(),
+      akteure: akteureEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), warum: r.warum })).filter(r => r.id),
+      veranstaltungen: veranstaltungenEditor.getValues()
+        .map(r => Store.list('veranstaltungen').find(v => normalize(v.titel) === normalize(r.name))?.id)
+        .filter(Boolean),
+      ordner,
+      reihenfolge,
+    };
+  };
 }
 
 function openForm(type, id, opts = {}) {
@@ -2070,7 +2377,7 @@ function mergeCollectionInto(type, incoming) {
 
 function mergeIncomingPayload(payload) {
   const stats = { added: 0, updated: 0 };
-  ['akteure', 'veranstaltungen', 'ideen'].forEach(type => {
+  ['akteure', 'veranstaltungen', 'ideen', 'ideenOrdner'].forEach(type => {
     const r = mergeCollectionInto(type, payload[type]);
     stats.added += r.added; stats.updated += r.updated;
   });
@@ -2088,6 +2395,7 @@ function currentPayload() {
     akteure: DATA.akteure,
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
+    ideenOrdner: DATA.ideenOrdner,
   };
 }
 
@@ -2167,7 +2475,8 @@ function downloadTemplate() {
         name: 'Pflichtfeld: Name der Person/Initiative/Institution',
         art: 'Person | Initiative | Institution',
         zu: 'ID eines anderen Akteurs, oder leer',
-        ort: '', themen: ['Thema aus dem Vokabular'], web: '', notiz: '',
+        ort: '', themen: ['Thema aus dem Vokabular'], web: '',
+        kurznotiz: `kurze Notiz, max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint vollständig in der Liste`, notiz: '',
         zusammenarbeit: false, quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
@@ -2184,7 +2493,13 @@ function downloadTemplate() {
         titel: 'Pflichtfeld', text: '',
         akteure: [{ id: 'akteur-id', warum: '' }],
         veranstaltungen: ['veranstaltung-id'],
+        ordner: 'ID eines Ideen-Ordners, oder leer', reihenfolge: 'Zahl, für manuelle Sortierung, optional',
         erstellt: 'YYYY-MM-DD', modified: 'ISO-Zeitstempel, optional',
+      },
+    },
+    ideenOrdner: {
+      'beispiel-ordner-id': {
+        name: 'Pflichtfeld: Name des Ordners', modified: 'ISO-Zeitstempel, optional',
       },
     },
   };
@@ -2262,6 +2577,43 @@ function wireFilters() {
       $('zeitFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
       renderAgenda();
     });
+  });
+}
+
+function wireIdeenToolbar() {
+  $('ideenSortFilter').querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      ideenSort = chip.dataset.sort;
+      localStorage.setItem(IDEEN_SORT_KEY, ideenSort);
+      $('ideenSortFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+      renderIdeen();
+    });
+  });
+
+  const addBtn = $('btnNeuerOrdner');
+  const inline = $('ordnerAddInline');
+  const input = $('ordnerAddInlineInput');
+  function confirmNeuerOrdner() {
+    const val = input.value.trim();
+    if (val) Store.put('ideenOrdner', null, { name: val });
+    inline.hidden = true;
+    addBtn.hidden = false;
+    renderIdeen();
+  }
+  function cancelNeuerOrdner() {
+    inline.hidden = true;
+    addBtn.hidden = false;
+  }
+  addBtn.addEventListener('click', () => {
+    inline.hidden = false;
+    addBtn.hidden = true;
+    input.value = '';
+    input.focus();
+  });
+  $('ordnerAddInlineConfirm').addEventListener('click', confirmNeuerOrdner);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmNeuerOrdner(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelNeuerOrdner(); }
   });
 }
 
@@ -2401,11 +2753,18 @@ function init() {
   loadLocal();
   wireTabs();
   wireFilters();
+  wireIdeenToolbar();
   wireSearch();
   wireNewPicker();
   wireDialogs();
   wireSettings();
   wireKeyboard();
+
+  const savedSort = localStorage.getItem(IDEEN_SORT_KEY);
+  if (savedSort && ['neu', 'alt', 'az', 'manuell'].includes(savedSort)) {
+    ideenSort = savedSort;
+    $('ideenSortFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.sort === ideenSort)));
+  }
 
   const savedTab = localStorage.getItem(TAB_KEY);
   if (savedTab && TAB_TYPE[savedTab]) currentView = savedTab;

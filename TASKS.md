@@ -81,3 +81,54 @@ Ausgangslage: `_App Konzept/KONZEPT.md` + `_App Konzept/feld-daten.json` (Erstbe
    (VoiceOver/NVDA) getestet, wie im Konzept unter 5.6 als offener Prüfpunkt vermerkt.
 7. Gestaltung (KONZEPT 5.5) war offen — User-Entscheidung dieser Session: dunkles Design wie
    die anderen Apps, Akzentfarbe Blau.
+
+## Session 2026-10-07 (Folgesession): Sync-Fix, Kurznotiz, Ideen-Sortierung & Ordner
+
+### Gemacht
+- **Sync-Punkt-Bug gefixt**: `setSyncStatus()` setzte die CSS-Klasse `idle` (verbunden &
+  synchronisiert), gestylt war aber nur `.sync-dot.synced` — der Punkt blieb grau statt grün.
+  Fix: CSS-Regel in `.sync-dot.idle` umbenannt (index.html, CSS-Bereich oben). Mit Playwright
+  verifiziert (`getComputedStyle` → `rgb(74,222,128)`).
+- **Akteure**: neues Feld `kurznotiz` (max. 100 Zeichen, Konstante `KURZNOTIZ_MAXLEN`) zusätzlich
+  zum bestehenden `notiz` (unbegrenzt). `kurznotiz` erscheint **vollständig, ungekürzt** direkt in
+  der Verzeichnis-Zeile (kein Klick nötig); ist `kurznotiz` leer, wird ersatzweise `notiz`
+  zweizeilig gekürzt angezeigt (Rückwärtskompatibilität für die 134 Alteinträge ohne
+  `kurznotiz`). Formularfeld mit Live-Zeichenzähler. In Suche, Template/Export integriert.
+- **Ideen**: grundlegend überarbeitet, User-Wunsch „sortieren können" umgesetzt:
+  - Von Karten-Raster (`.cards`) auf einfache Liste (`.row`, wie Verzeichnis/Agenda) umgestellt.
+  - Sortier-Chips: Neu (Standard) / Alt / A-Z / Manuell, Zustand in `localStorage` persistiert.
+  - Neuer Datentyp `ideenOrdner` (eigene Collection in `DATA`, gleiches Tombstone-Lösch-Muster
+    wie akteure/veranstaltungen/ideen) — Ideen lassen sich Ordnern zuordnen (Feld `ordner` auf
+    der Idee). Anlegen über „+ Ordner" im Toolbar (Ideen-Reiter) oder inline im Idee-Formular;
+    Umbenennen per Klick auf ✎ (inline editierbar); Löschen über den bestehenden
+    zweistufigen `attachDeleteButton`-Mechanismus (Ideen verlieren dabei nur die
+    Ordner-Zuordnung, werden nicht gelöscht — referenzielle Integrität wie bei
+    Akteuren/Veranstaltungen).
+  - Manuelle Sortierung: Feld `reihenfolge` (Zahl) auf der Idee. Im Modus „Manuell" erscheinen
+    pro Idee ▲/▼-Buttons (tastaturfreundliche Alternative zu Drag&Drop); zusätzlich echtes
+    HTML5-Drag&Drop: Ziehen zwischen Zeilen (nur im Modus „Manuell") positioniert fein,
+    Ziehen auf einen Ordner-Header (**in jedem Sortiermodus**) verschiebt die Idee in diesen
+    Ordner. Beides nummeriert die betroffene Zielgruppe komplett neu durch (Schrittweite 10).
+  - Kleiner generischer Fix in `attachDeleteButton`: `btn.closest('.dialog-foot, form')` konnte
+    `null` liefern (Ordner-Löschen-Button sitzt in keinem von beidem) → Fallback auf `btn` selbst,
+    sonst wäre beim Löschen eines referenzierten Ordners ein JS-Fehler geflogen.
+- **Getestet** mit Playwright headless (`playwright-core`, System-Chrome, selbes Rezept wie
+  Erstsession, diesmal via `npm install --no-save playwright-core` im Scratchpad): Kurznotiz
+  anlegen + Zähler + Anzeige in der Zeile, Ordner anlegen/umbenennen/löschen (inkl. Warnbox bei
+  Verweisen, Ideen bleiben erhalten), Sortier-Umschaltung, Drag&Drop Zeile→Zeile (Manuell-Modus)
+  und Zeile→Ordner-Header (alle Modi), Sync-Punkt-Farbe. Keine Konsolenfehler.
+- Datenschicht (`loadLocal`/`saveLocal`/`currentPayload`/`mergeIncomingPayload`/`uid`/
+  `Store.put`/`referencingFor`/`stripReferencesTo`) durchgängig um `ideenOrdner` ergänzt, damit
+  GitHub-Sync und Tombstone-Löschung auch für Ordner funktionieren.
+
+### Offen / nächster Schritt
+1. Sync-Bug (grauer Punkt) war eigentlich ein zweites, am Session-Anfang vermutetes Problem
+   (Login-Unterschied tulip/lw) — das war laut User nur ein Tippfehler beim Login, der grau
+   bleibende Punkt danach war der eigentliche (jetzt gefixte) CSS-Bug.
+2. `KURZNOTIZ_MAXLEN = 100` ist eine Annahme (User hat keine genaue Zahl genannt) — bei Bedarf
+   anpassen (eine Konstante, index.html, Suche `KURZNOTIZ_MAXLEN`).
+3. User commitet selbst und kopiert den Code-Stand manuell zu `lw` hinüber (eigener Workflow,
+   kein GitHub-Push von hier aus nötig/gewünscht) — **diese Session hat nichts committet**,
+   nur Dateien geändert.
+4. Bestehende offene Punkte aus der Erstsession (s. oben, Nr. 1–6) weiterhin unverändert offen,
+   insbesondere: noch kein Git-Commit, kein GitHub-Repo, Sync nie gegen echtes Repo getestet.
