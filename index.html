@@ -679,17 +679,6 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     </div>
 
     <div class="settings-section">
-      <h3>Knotenpunkte</h3>
-      <p class="settings-hint">Knotenpunkte werden in der Kartei vergeben. Umbenennen, zuweisen, zusammenführen und löschen: in der Spalte Knotenpunkte einen auswählen, dann ⋯ → Bearbeiten. Hier lassen sich Knotenpunkte auf Vorrat anlegen.</p>
-      <div class="theme-picker" id="themaVocabList"></div>
-      <div class="theme-add-row">
-        <label for="themaVocabInput" class="sr-only">Neuer Knotenpunkt</label>
-        <input type="text" id="themaVocabInput" placeholder="Neuer Knotenpunkt …">
-        <button class="btn" id="themaVocabAdd" type="button">Hinzufügen</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
       <h3>Export / Import</h3>
       <p class="settings-hint">Export als Sicherung oder zur Übertragung. Import fügt Daten aus einer Datei zusammen (gleiche ID = neuere Version gewinnt).</p>
       <div class="btn-row">
@@ -2675,15 +2664,6 @@ function importFile(file) {
 
 
 /* =========================================================================
-   Themenvokabular-Verwaltung (Einstellungen) → «Knotenpunkte»
-   ========================================================================= */
-function renderThemaVocabSettings() {
-  ensureVokabular();
-  $('themaVocabList').innerHTML = DATA.themenVokabular
-    .map(t => `<span class="chip" style="cursor:default">${escapeHtml(t)}</span>`).join('');
-}
-
-/* =========================================================================
    Init / Event-Verdrahtung
    ========================================================================= */
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -2774,7 +2754,6 @@ function wireSettings() {
       $('cfg-path').value = syncConfig.path || '';
       $('cfg-token').value = syncConfig.token || '';
     }
-    renderThemaVocabSettings();
     $('syncSettingsStatus').textContent = syncConfig ? '' : 'Noch nicht verbunden.';
     $('syncSettingsStatus').className = 'settings-status';
     if (!$('settingsDialog').open) $('settingsDialog').showModal();
@@ -2808,21 +2787,6 @@ function wireSettings() {
     setSyncStatus('off');
     $('syncSettingsStatus').textContent = 'Getrennt. Daten bleiben lokal erhalten.';
     $('syncSettingsStatus').className = 'settings-status';
-  });
-
-  $('themaVocabAdd').addEventListener('click', () => {
-    const val = $('themaVocabInput').value.trim();
-    if (!val) return;
-    if (!findKnoten(val)) {
-      DATA.themenVokabular.push(val);
-      saveLocal();
-      renderThemaVocabSettings();
-      ensureKnotenDatalist();
-    }
-    $('themaVocabInput').value = '';
-  });
-  $('themaVocabInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); $('themaVocabAdd').click(); }
   });
 
   $('btnExport').addEventListener('click', exportData);
