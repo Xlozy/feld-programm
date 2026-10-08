@@ -366,7 +366,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 .dialog-title { font-size: 20px; font-weight: 700; margin-top: 2px; word-break: break-word; }
 .dialog-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 20px; line-height: 1; flex-shrink: 0; }
 .dialog-close:hover { background: var(--sel); color: var(--text); }
-.dialog-body { padding: 16px 20px 18px; overflow-y: auto; flex: 1; }
+.dialog-body { padding: 16px 20px 18px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }  /* Safari: flex-basis 0 liess den Inhalt auf wenige Pixel schrumpfen */
 .dialog-foot { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line-2); flex-shrink: 0; flex-wrap: wrap; background: var(--kartei); }
 .kartei-foot.dialog-foot { background: transparent; }
 
