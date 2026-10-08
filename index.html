@@ -147,6 +147,11 @@ button { cursor: pointer; }
   border-left: 1px solid var(--line); position: relative; z-index: 2;
 }
 .resizer:hover, .resizer.dragging { background: var(--line-2); }
+.resizer::after { content: ""; position: absolute; inset: 0 -4px; }   /* grössere Greiffläche */
+body.is-resizing { cursor: col-resize; user-select: none; }
+.nav-hist { display: flex; gap: 2px; }
+.nav-hist .icon-btn[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+.nav-hist .icon-btn[aria-disabled="true"]:hover { background: none; color: var(--muted); }
 .resizer:focus-visible { outline: none; background: var(--accent); }
 .col-head {
   display: flex; align-items: center; gap: 8px;
@@ -264,9 +269,51 @@ button { cursor: pointer; }
 .kartei-head { display: flex; gap: 8px; align-items: flex-start; padding: 6px 18px 12px 20px; }
 .kartei-head-main { flex: 1; min-width: 0; }
 .kartei-eyebrow { font-size: 12px; color: var(--muted); }
-.kartei-title { font-size: 22px; font-weight: 700; line-height: 1.25; margin-top: 2px; word-break: break-word; }
-.kartei-title:focus { outline: none; }
-.kartei-title:focus-visible { outline: 2px solid var(--focus); }
+.kartei-title {
+  display: block; width: calc(100% + 16px); margin: 2px -8px 0; padding: 2px 8px;
+  font-size: 22px; font-weight: 700; line-height: 1.25; color: var(--text);
+  background: transparent; border: 1px solid transparent; border-radius: 6px; resize: none; overflow: hidden;
+}
+.kartei-title:hover { border-color: var(--line-2); }
+.kartei-title:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+.kartei-title::placeholder { color: var(--muted); }
+/* Direkt bearbeitbare Felder: sehen aus wie Text, werden beim Zeigen/Fokus zum Feld */
+.kf { margin-bottom: 12px; min-width: 0; }
+.kf-labelrow { display: flex; align-items: baseline; gap: 8px; }
+.kf-labelrow .field-label { flex: 1; }
+.kf-count, .kf-open { font-size: 12px; color: var(--muted); }
+.kf-open { color: var(--accent); text-decoration: none; }
+.kf-open:hover { text-decoration: underline; }
+.kf input[type="text"], .kf input[type="date"], .kf textarea, .kf select, .rel-extra {
+  display: block; width: calc(100% + 16px); margin: 0 -8px; padding: 4px 8px;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text); font-size: 14px; line-height: 1.45;
+}
+.kf textarea { resize: none; overflow: hidden; min-height: 30px; }
+.kf input:hover, .kf textarea:hover, .kf select:hover, .rel-extra:hover { border-color: var(--line-2); }
+.kf input:focus, .kf textarea:focus, .kf select:focus, .rel-extra:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+.kf input::placeholder, .kf textarea::placeholder, .rel-extra::placeholder { color: var(--muted); }
+.kf select option { background: var(--raised); }
+.kf input[type="date"] { color-scheme: dark; }
+.kf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); column-gap: 20px; }
+.kf-check { display: flex; align-items: center; gap: 8px; }
+.kf-check input { accent-color: var(--accent); width: 16px; height: 16px; }
+.kf-check label { color: var(--text-2); }
+.rel-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.rel-row { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 3px 4px 3px 10px; }
+.rel-single { margin-top: 2px; }
+.rel-link { flex: 0 1 auto; max-width: 55%; min-width: 0; background: none; border: 0; color: var(--accent); text-align: left; padding: 3px 0; font-size: 13.5px; }
+.rel-link:hover { text-decoration: underline; }
+.rel-extra { flex: 1; min-width: 70px; width: auto; margin: 0; font-size: 13px; color: var(--muted); }
+.rel-extra:focus { color: var(--text); }
+.rel-remove { margin-left: auto; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 15px; flex-shrink: 0; }
+.rel-remove:hover { background: var(--sel); color: var(--danger); }
+.rel-add { display: flex; gap: 6px; margin-top: 6px; }
+.rel-add input { flex: 1; min-width: 0; height: 30px; background: var(--bg); border: 1px dashed var(--line-3); border-radius: 7px; padding: 0 8px; color: var(--text); }
+.rel-add input:focus { border-style: solid; border-color: var(--accent); outline: none; }
+.rel-add input[aria-invalid="true"] { border-color: var(--danger); }
+.rel-add .btn { padding: 3px 10px; }
+.kartei-saved { font-size: 12px; color: var(--muted); }
 .kartei-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .text-badge { font-size: 12px; border-radius: 5px; padding: 1px 7px; border: 1px solid var(--diamond); color: var(--diamond); }
 .kartei-body { padding: 4px 20px 20px; }
@@ -448,6 +495,14 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     <button role="tab" id="tab-ideen" aria-controls="colListe" aria-selected="false" tabindex="-1" data-view="ideen">Ideen</button>
   </nav>
   <span class="topbar-spacer"></span>
+  <div class="nav-hist" role="group" aria-label="Verlauf">
+    <button type="button" class="icon-btn" id="navBack" aria-label="Zurück" aria-disabled="true" aria-keyshortcuts="Meta+BracketLeft Control+BracketLeft Alt+ArrowLeft">
+      <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="navFwd" aria-label="Vorwärts" aria-disabled="true" aria-keyshortcuts="Meta+BracketRight Control+BracketRight Alt+ArrowRight">
+      <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </div>
   <form class="search" id="searchForm" role="search">
     <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <label for="searchInput" class="sr-only">Suchen im aktuellen Bereich</label>
@@ -491,7 +546,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     </div>
   </aside>
 
-  <div class="resizer" id="resizeKnoten" role="separator" aria-orientation="vertical" aria-label="Breite der Knotenpunkte" aria-controls="colKnoten" tabindex="0"></div>
+  <div class="resizer" id="resizeKnoten" role="separator" aria-orientation="vertical" aria-label="Breite der Knotenpunkte" aria-controls="colKnoten" aria-describedby="resizeHint" tabindex="0" title="Ziehen: Breite · ganz einziehen oder Doppelklick: einklappen"></div>
 
   <main class="col" id="colListe" role="tabpanel" aria-labelledby="listTitle">
     <div class="list-head">
@@ -509,7 +564,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     <div class="entries" id="entryList"></div>
   </main>
 
-  <div class="resizer" id="resizeKartei" role="separator" aria-orientation="vertical" aria-label="Breite der Kartei" aria-controls="colKartei" tabindex="0"></div>
+  <div class="resizer" id="resizeKartei" role="separator" aria-orientation="vertical" aria-label="Breite der Kartei" aria-controls="colKartei" aria-describedby="resizeHint" tabindex="0" title="Ziehen: Breite · ganz einziehen oder Doppelklick: einklappen"></div>
 
   <aside class="col" id="colKartei" aria-label="Kartei">
     <button type="button" class="col-rail" id="karteiRail" aria-expanded="false" aria-controls="karteiContent">
@@ -531,6 +586,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 </div>
 
 <datalist id="knotenNamesList"></datalist>
+<p id="resizeHint" hidden>Pfeiltasten ändern die Breite, Enter klappt ein oder aus.</p>
 
 <!-- Knotenpunkt bearbeiten -->
 <dialog id="knotenDialog" aria-labelledby="kdTitle">
@@ -582,19 +638,6 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
       <button type="submit" class="btn btn-primary" id="kdApply">Anwenden</button>
     </div>
   </form>
-</dialog>
-
-<!-- Formular-Dialog -->
-<dialog id="formDialog" aria-labelledby="formTitle">
-  <div class="dialog-head">
-    <div class="dialog-head-main">
-      <div class="dialog-eyebrow" id="formEyebrow"></div>
-      <h2 class="dialog-title" id="formTitle"></h2>
-    </div>
-    <button class="dialog-close" id="formClose" aria-label="Schliessen">×</button>
-  </div>
-  <form class="dialog-body" id="formBody"></form>
-  <div class="dialog-foot" id="formFoot"></div>
 </dialog>
 
 <!-- Einstellungen-Dialog -->
@@ -1461,7 +1504,7 @@ function renderListe() {
       ? 'Keine Treffer mit diesen Filtern.'
       : `Noch keine ${AREA_LABEL[area]}. <button class="btn-link" id="emptyNew">${NEU_LABEL[type]} anlegen</button>`}</div>`;
     const b = $('emptyNew');
-    if (b) b.addEventListener('click', () => openForm(type, null));
+    if (b) b.addEventListener('click', () => createNew(type));
     return;
   }
 
@@ -1543,8 +1586,7 @@ function entryRow(type, item) {
   if (type === 'akteure') {
     if (istZusammengearbeitet(item.id)) { marker = '◆'; markerSr = 'zusammengearbeitet'; }
     tag = item.art || '';
-    const why = item.kurznotiz || item.notiz || '';
-    if (why) lines += `<span class="entry-why">${escapeHtml(why)}</span>`;
+    if (item.kurznotiz) lines += `<span class="entry-why">${escapeHtml(item.kurznotiz)}</span>`;
   } else if (type === 'veranstaltungen') {
     if (item.eigene) { marker = '◆'; markerSr = 'eigenes Projekt'; }
     const meta = [formatDateRange(item.datum, item.bis), item.format, item.ort].filter(Boolean).join(' · ');
@@ -1561,7 +1603,7 @@ function entryRow(type, item) {
       <span class="entry-marker" aria-hidden="true">${marker}</span>
       <span class="entry-body">
         <span class="entry-top">
-          <span class="entry-name">${escapeHtml(titleOf(type, item))}</span>
+          <span class="entry-name">${escapeHtml(titleOf(type, item) || '(ohne Titel)')}</span>
           ${tag ? `<span class="entry-tag">${escapeHtml(tag)}</span>` : ''}
           ${markerSr ? `<span class="sr-only">, ${markerSr}</span>` : ''}
         </span>
@@ -1667,9 +1709,12 @@ function moveIdeeStep(ideeId, direction) {
 }
 
 /* =========================================================================
-   Kartei (rechte Spalte, ersetzt den früheren Detail-Dialog)
+   Kartei (rechte Spalte) – direkt bearbeitbar, speichert automatisch.
+   Ersetzt Detail-Dialog und Formular-Dialog.
    ========================================================================= */
-let karteiHistory = []; // {type,id} für «Zurück» nach Verweis-Navigation
+let draftNew = null;           // {type,id} eines frisch angelegten, noch leeren Eintrags
+let navHist = [];              // Verlauf angesehener Karteikarten {type,id}
+let navPos = -1;
 
 function currentSelection() {
   const id = selected[currentView];
@@ -1677,21 +1722,73 @@ function currentSelection() {
   return id && Store.get(type, id) ? { type, id } : null;
 }
 
+/* ---------- Verlauf: Zurück / Vorwärts (Topbar) ---------- */
+function navPush(sel, replace) {
+  const cur = navHist[navPos];
+  if (cur && cur.type === sel.type && cur.id === sel.id) return;
+  if (replace && cur) { navHist[navPos] = sel; updateNavButtons(); return; }
+  navHist = navHist.slice(0, navPos + 1);
+  navHist.push(sel);
+  if (navHist.length > 200) navHist.shift();
+  navPos = navHist.length - 1;
+  updateNavButtons();
+}
+
+function navTarget(delta) {
+  let p = navPos + delta;
+  while (p >= 0 && p < navHist.length && !Store.get(navHist[p].type, navHist[p].id)) p += delta;
+  return p >= 0 && p < navHist.length ? p : -1;
+}
+
+function navGo(delta) {
+  const p = navTarget(delta);
+  if (p < 0) return;
+  navPos = p;
+  const t = navHist[p];
+  selectEntry(t.type, t.id, { fromHistory: true, focusKartei: true });
+  updateNavButtons();
+}
+
+function updateNavButtons() {
+  [['navBack', -1], ['navFwd', 1]].forEach(([id, d]) => {
+    const btn = $(id);
+    if (!btn) return;
+    const p = navTarget(d);
+    btn.setAttribute('aria-disabled', String(p < 0));
+    const base = d < 0 ? 'Zurück' : 'Vorwärts';
+    const t = p >= 0 ? Store.get(navHist[p].type, navHist[p].id) : null;
+    btn.title = `${base} (${IS_MAC ? '⌘' : 'Strg+'}${d < 0 ? '[' : ']'})${t ? ': ' + (titleOf(navHist[p].type, t) || 'ohne Titel') : ''}`;
+  });
+}
+
+/* ---------- Auswahl ---------- */
+function discardEmptyDraft(except) {
+  if (!draftNew) return;
+  const { type, id } = draftNew;
+  if (except && except.type === type && except.id === id) return;
+  draftNew = null;
+  const it = Store.get(type, id);
+  if (it && !String(titleOf(type, it) || '').trim()) {
+    Store.remove(type, id);
+    if (selected[TYPE_AREA[type]] === id) selected[TYPE_AREA[type]] = null;
+  }
+}
+
 function selectEntry(type, id, opts = {}) {
+  discardEmptyDraft({ type, id });
   const area = TYPE_AREA[type];
-  const prev = currentSelection();
-  if (opts.fromRef && prev) karteiHistory.push(prev);
-  else if (!opts.viaBack) karteiHistory = [];
   selected[area] = id;
+  if (!opts.fromHistory) navPush({ type, id }, opts.replace);
   if (area !== currentView) switchView(area);
   else { markSelectedRow(); renderKartei(); }
   if (window.matchMedia('(max-width: 860px)').matches) document.body.classList.add('kartei-open');
-  if (opts.fromRef || opts.focusKartei) {
+  if (opts.focusTitle || opts.focusKartei) {
     const t = $('karteiTitle');
-    if (t) t.focus();
+    if (t) { t.focus(); if (opts.focusTitle) t.select(); }
   }
   const row = Array.from(document.querySelectorAll('#entryList .entry-row')).find(r => r.dataset.id === id);
   if (row) row.scrollIntoView({ block: 'nearest' });
+  updateNavButtons();
 }
 
 function markSelectedRow() {
@@ -1701,22 +1798,100 @@ function markSelectedRow() {
   });
 }
 
-// Kompatibilität mit dem bestehenden Formular-Code
-function openDetail(type, id) { selectEntry(type, id); }
-function refreshDetailIfShowing() { renderKartei(); }
 function closeDetail() {
   selected[currentView] = null;
-  karteiHistory = [];
   document.body.classList.remove('kartei-open');
   markSelectedRow();
   renderKartei();
 }
 
-function fieldGroup(label, html, empty) {
-  return `<div class="field-group">
-    <div class="field-label">${escapeHtml(label)}</div>
-    <div class="field-value${empty ? ' empty' : ''}">${html}</div>
+// Neuer Eintrag: wird sofort angelegt und in der Kartei geöffnet; bleibt der
+// Titel leer, wird er beim Wegnavigieren wieder verworfen.
+function createNew(type, prefill = {}) {
+  discardEmptyDraft();
+  const base = type === 'akteure'
+    ? { name: '', art: 'Person', themen: [], zu: '', zusammenarbeit: false }
+    : type === 'veranstaltungen'
+      ? { titel: '', datum: '', eigene: false, beteiligte: [], themen: [] }
+      : { titel: '', text: '', akteure: [], veranstaltungen: [], themen: [] };
+  const fields = { ...base, ...prefill };
+  if (type === 'ideen') {
+    const max = Math.max(0, ...Store.list('ideen').map(i => i.reihenfolge || 0));
+    fields.reihenfolge = max + 10;
+  }
+  // Selbst bei aktiven Knotenpunkt-Filtern soll der neue Eintrag sichtbar bleiben
+  fields.themen = Array.from(new Set([...(fields.themen || []), ...selectedKnoten]));
+  const id = Store.put(type, null, fields);
+  draftNew = { type, id };
+  if (TYPE_AREA[type] !== currentView) { selected[TYPE_AREA[type]] = id; switchView(TYPE_AREA[type]); }
+  else renderListe();
+  selectEntry(type, id, { focusTitle: true });
+  announce(`${NEU_LABEL[type]} angelegt`);
+}
+
+/* ---------- Speichern ---------- */
+const scheduleListRefresh = debounce(() => { renderListe(); markSelectedRow(); updateNavButtons(); }, 250);
+
+function patch(type, id, fields) {
+  if (!Store.get(type, id)) return;
+  Store.put(type, id, fields);
+  if (draftNew && draftNew.id === id && String(titleOf(type, Store.get(type, id)) || '').trim()) draftNew = null;
+  scheduleListRefresh();
+}
+
+// Textfeld an ein Datenfeld binden: speichert beim Tippen (verzögert) und beim Verlassen.
+function bindField(el, type, id, field, opts = {}) {
+  const read = () => {
+    if (el.type === 'checkbox') return el.checked;
+    const v = el.value;
+    return opts.raw ? v : v.trim();
+  };
+  const commit = () => {
+    const item = Store.get(type, id);
+    if (!item) return;
+    let v = read();
+    if (opts.parse) v = opts.parse(v);
+    const cur = item[field] ?? (el.type === 'checkbox' ? false : '');
+    if (v === cur) return;
+    patch(type, id, { [field]: v });
+    if (opts.after) opts.after(v);
+  };
+  if (el.type === 'checkbox' || el.tagName === 'SELECT' || el.type === 'date') {
+    el.addEventListener('change', commit);
+  } else {
+    el.addEventListener('input', debounce(commit, 400));
+    el.addEventListener('change', commit);
+    el.addEventListener('blur', commit);
+  }
+}
+
+function autosize(ta) {
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; };
+  ta.addEventListener('input', fit);
+  requestAnimationFrame(fit);
+}
+
+/* ---------- Bausteine ---------- */
+function kfText(label, field, value, o = {}) {
+  const fid = 'kf-' + field;
+  const attrs = [
+    o.list ? `list="${o.list}"` : '',
+    o.maxlength ? `maxlength="${o.maxlength}"` : '',
+    o.placeholder ? `placeholder="${escapeHtml(o.placeholder)}"` : 'placeholder="–"',
+    o.describedby ? `aria-describedby="${o.describedby}"` : '',
+  ].join(' ');
+  const input = o.multiline
+    ? `<textarea id="${fid}" data-field="${field}" rows="1" ${attrs}>${escapeHtml(value || '')}</textarea>`
+    : `<input type="${o.type || 'text'}" id="${fid}" data-field="${field}" value="${escapeHtml(value || '')}" autocomplete="off" ${attrs}>`;
+  return `<div class="kf${o.wide ? ' kf-wide' : ''}">
+    <div class="kf-labelrow"><label class="field-label" for="${fid}">${escapeHtml(label)}</label>${o.extra || ''}</div>
+    ${input}${o.after || ''}
   </div>`;
+}
+
+function refListGroup(label, items, emptyText) {
+  return `<div class="field-group"><div class="field-label">${escapeHtml(label)} (${items.length})</div>${
+    items.length ? `<div class="ref-list">${items.join('')}</div>` : `<div class="field-value empty">${emptyText || 'keine'}</div>`}</div>`;
 }
 
 function refButton(type, id, label, sub) {
@@ -1725,61 +1900,201 @@ function refButton(type, id, label, sub) {
   </button>`;
 }
 
-function webLink(web) {
-  if (!web) return '';
-  const href = /^https?:\/\//.test(web) ? web : `https://${web}`;
-  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(web)}</a>`;
+function webHref(web) { return /^https?:\/\//.test(web) ? web : `https://${web}`; }
+
+// Bearbeitbare Beziehungsliste (Beteiligte, Akteure einer Idee, Projekte einer Idee)
+function relEditor(key, label, rows, o) {
+  return `<div class="field-group rel" data-rel="${key}">
+    <div class="field-label" id="rel-${key}-label">${escapeHtml(label)} (${rows.length})</div>
+    <ul class="rel-list" aria-labelledby="rel-${key}-label">
+      ${rows.map((r, i) => `<li class="rel-row" data-idx="${i}">
+        <button type="button" class="rel-link" data-ref-type="${r.type}" data-ref-id="${escapeHtml(r.id)}">${escapeHtml(r.label)}</button>
+        ${o.extraKey ? `<input type="text" class="rel-extra" data-idx="${i}" value="${escapeHtml(r.extra || '')}" placeholder="${escapeHtml(o.extraPlaceholder)}" ${o.extraList ? `list="${o.extraList}"` : ''} aria-label="${escapeHtml(o.extraPlaceholder)} – ${escapeHtml(r.label)}">` : ''}
+        <button type="button" class="rel-remove" data-idx="${i}" aria-label="${escapeHtml(r.label)} entfernen">×</button>
+      </li>`).join('')}
+    </ul>
+    <div class="rel-add">
+      <input type="text" class="rel-add-name" list="${o.list}" autocomplete="off" placeholder="${escapeHtml(o.addPlaceholder)}" aria-label="${escapeHtml(o.addPlaceholder)}">
+      ${o.extraKey ? `<input type="text" class="rel-add-extra" ${o.extraList ? `list="${o.extraList}"` : ''} placeholder="${escapeHtml(o.extraPlaceholder)}" aria-label="${escapeHtml(o.extraPlaceholder)}">` : ''}
+      <button type="button" class="btn rel-add-btn">Hinzufügen</button>
+    </div>
+  </div>`;
 }
 
-function refListGroup(label, items, emptyText) {
-  return `<div class="field-group"><div class="field-label">${escapeHtml(label)} (${items.length})</div>${
-    items.length ? `<div class="ref-list">${items.join('')}</div>` : `<div class="field-value empty">${emptyText || 'keine'}</div>`}</div>`;
+function wireRelEditor(host, key, o) {
+  const box = host.querySelector(`[data-rel="${key}"]`);
+  if (!box) return;
+  box.querySelectorAll('.rel-remove').forEach(b => b.addEventListener('click', () => {
+    o.remove(Number(b.dataset.idx));
+    renderKartei({ focus: `[data-rel="${key}"] .rel-add-name` });
+  }));
+  box.querySelectorAll('.rel-extra').forEach(inp => {
+    const save = () => o.setExtra(Number(inp.dataset.idx), inp.value.trim());
+    inp.addEventListener('input', debounce(save, 400));
+    inp.addEventListener('change', save);
+  });
+  const nameIn = box.querySelector('.rel-add-name');
+  const extraIn = box.querySelector('.rel-add-extra');
+  const add = () => {
+    const name = nameIn.value.trim();
+    if (!name) { nameIn.focus(); return; }
+    const ok = o.add(name, extraIn ? extraIn.value.trim() : '');
+    if (ok === false) return;
+    renderKartei({ focus: `[data-rel="${key}"] .rel-add-name` });
+  };
+  box.querySelector('.rel-add-btn').addEventListener('click', add);
+  [nameIn, extraIn].filter(Boolean).forEach(inp => inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); add(); }
+  }));
 }
 
-function renderAkteurDetailBody(a) {
+/* ---------- Karteikarten je Typ ---------- */
+function akteurBody(a) {
   const b = akteurBackrefs(a.id);
+  const zuName = a.zu ? akteurName(a.zu) : '';
   let html = '';
-  html += fieldGroup('Aufgenommen, weil', a.kurznotiz ? escapeHtml(a.kurznotiz) : '–', !a.kurznotiz);
-  html += fieldGroup('Art', escapeHtml(a.art || '–'));
-  if (a.zu) html += fieldGroup('Gehört zu', refButton('akteure', a.zu, akteurName(a.zu) || '(unbekannt)'));
-  html += fieldGroup('Ort', a.ort ? escapeHtml(a.ort) : '–', !a.ort);
-  html += fieldGroup('Web', a.web ? webLink(a.web) : '–', !a.web);
-  html += fieldGroup('Notiz', a.notiz ? escapeHtml(a.notiz) : '–', !a.notiz);
-  if (a.quelle) html += fieldGroup('Quelle', escapeHtml(a.quelle));
-  html += refListGroup('Projekte', b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel,
+  html += kfText('Aufgenommen, weil', 'kurznotiz', a.kurznotiz, {
+    maxlength: KURZNOTIZ_MAXLEN, placeholder: 'Kurz: warum im Verzeichnis – erscheint in der Liste',
+    describedby: 'kf-kurznotiz-count',
+    extra: `<span class="kf-count" id="kf-kurznotiz-count">${(a.kurznotiz || '').length} / ${KURZNOTIZ_MAXLEN}</span>`,
+  });
+  html += kfText('Informationen', 'notiz', a.notiz, { multiline: true, rows: 3, placeholder: 'Weitere Informationen, ohne Längenbegrenzung' });
+  html += `<div class="kf-grid">
+    <div class="kf"><label class="field-label" for="kf-art">Art</label>
+      <select id="kf-art" data-field="art">${['Person', 'Initiative', 'Institution'].map(x => `<option${x === a.art ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
+    ${kfText('Ort', 'ort', a.ort)}
+  </div>`;
+  html += `<div class="kf"><label class="field-label" for="kf-zu">Gehört zu</label>
+    ${a.zu && zuName
+      ? `<div class="rel-row rel-single"><button type="button" class="rel-link" data-ref-type="akteure" data-ref-id="${escapeHtml(a.zu)}">${escapeHtml(zuName)}</button>
+         <button type="button" class="rel-remove" id="kf-zu-clear" aria-label="Zugehörigkeit zu ${escapeHtml(zuName)} entfernen">×</button></div>`
+      : `<input type="text" id="kf-zu" list="akteurNamesList" autocomplete="off" placeholder="Institution oder Initiative …">`}
+  </div>`;
+  html += kfText('Web', 'web', a.web, {
+    placeholder: 'ohne https://',
+    extra: a.web ? `<a class="kf-open" href="${escapeHtml(webHref(a.web))}" target="_blank" rel="noopener">öffnen<span class="sr-only"> (neues Fenster)</span> ↗</a>` : '',
+  });
+  html += `<div class="kf kf-check"><input type="checkbox" id="kf-zusammenarbeit" data-field="zusammenarbeit"${a.zusammenarbeit ? ' checked' : ''}>
+    <label for="kf-zusammenarbeit">Zusammengearbeitet (manuell, ohne eigenes Projekt)</label></div>`;
+  html += kfText('Quelle', 'quelle', a.quelle);
+  html += refListGroup('Projekte', b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel || '(ohne Titel)',
     [formatDateRange(x.item.datum, x.item.bis), x.rolle].filter(Boolean).join(' · '))));
-  html += refListGroup('Ideen', b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel, x.warum)));
+  html += refListGroup('Ideen', b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel || '(ohne Titel)', x.warum)));
   if (b.zugehoerige.length) html += refListGroup('Zugehörige Akteure', b.zugehoerige.map(x => refButton('akteure', x.id, x.name, x.art)));
   return html;
 }
 
-function renderVeranstaltungDetailBody(v) {
+function wireAkteurBody(host, a) {
+  const { id } = a;
+  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'akteure', id, el.dataset.field, {
+    parse: el.dataset.field === 'web' ? v => v.replace(/^https?:\/\//, '') : undefined,
+    after: el.dataset.field === 'zusammenarbeit' ? () => renderKartei({ focus: '#kf-zusammenarbeit' }) : undefined,
+  }));
+  const k = $('kf-kurznotiz');
+  k.addEventListener('input', () => { $('kf-kurznotiz-count').textContent = `${k.value.length} / ${KURZNOTIZ_MAXLEN}`; });
+  const zu = $('kf-zu');
+  if (zu) {
+    const set = () => {
+      const v = zu.value.trim();
+      if (!v) return;
+      const zid = resolveOrCreateAkteur(v, 'Institution');
+      if (!zid || zid === id) return;
+      patch('akteure', id, { zu: zid });
+      renderKartei({ focus: '#kf-zu-clear' });
+    };
+    zu.addEventListener('change', set);
+    zu.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); set(); } });
+  }
+  const clr = $('kf-zu-clear');
+  if (clr) clr.addEventListener('click', () => { patch('akteure', id, { zu: '' }); renderKartei({ focus: '#kf-zu' }); });
+}
+
+function projektBody(v) {
   const b = veranstaltungBackrefs(v.id);
   let html = '';
-  html += fieldGroup('Datum', v.datum ? escapeHtml(formatDateRange(v.datum, v.bis)) + (v.zeit ? ', ' + escapeHtml(v.zeit) : '') : '–', !v.datum);
-  html += fieldGroup('Ort', v.ort ? escapeHtml(v.ort) : '–', !v.ort);
-  html += fieldGroup('Format', v.format ? escapeHtml(v.format) : '–', !v.format);
-  if (v.reihe) html += fieldGroup('Reihe', escapeHtml(v.reihe));
-  html += refListGroup('Beteiligte', (v.beteiligte || []).map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.rolle)));
-  html += fieldGroup('Beschrieb', v.beschrieb ? escapeHtml(v.beschrieb) : '–', !v.beschrieb);
-  if (v.quelle) html += fieldGroup('Quelle', escapeHtml(v.quelle));
-  html += refListGroup('Ideen, die darauf verweisen', b.ideen.map(i => refButton('ideen', i.id, i.titel)));
+  html += `<div class="kf-grid">
+    ${kfText('Datum', 'datum', v.datum, { type: 'date' })}
+    ${kfText('Bis', 'bis', v.bis, { type: 'date' })}
+    ${kfText('Zeit', 'zeit', v.zeit, { placeholder: 'z. B. 19–20 Uhr' })}
+    ${kfText('Ort', 'ort', v.ort)}
+    ${kfText('Format', 'format', v.format, { list: 'formatList' })}
+    ${kfText('Reihe', 'reihe', v.reihe, { list: 'reiheList' })}
+  </div>`;
+  html += `<div class="kf kf-check"><input type="checkbox" id="kf-eigene" data-field="eigene"${v.eigene ? ' checked' : ''}>
+    <label for="kf-eigene">Eigenes Projekt</label></div>`;
+  html += relEditor('beteiligte', 'Beteiligte', (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })), {
+    list: 'akteurNamesList', addPlaceholder: 'Name hinzufügen …', extraKey: 'rolle', extraPlaceholder: 'Rolle', extraList: 'roleList',
+  });
+  html += kfText('Beschrieb', 'beschrieb', v.beschrieb, { multiline: true, rows: 3 });
+  html += kfText('Quelle', 'quelle', v.quelle);
+  html += refListGroup('Ideen, die darauf verweisen', b.ideen.map(i => refButton('ideen', i.id, i.titel || '(ohne Titel)')));
   return html;
 }
 
-function renderIdeeDetailBody(i) {
+function wireProjektBody(host, v) {
+  const { id } = v;
+  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'veranstaltungen', id, el.dataset.field, {
+    after: ['datum', 'bis', 'eigene'].includes(el.dataset.field) ? () => { renderListe(); markSelectedRow(); } : undefined,
+  }));
+  const cur = () => (Store.get('veranstaltungen', id).beteiligte || []).slice();
+  wireRelEditor(host, 'beteiligte', {
+    remove: i => { const l = cur(); l.splice(i, 1); patch('veranstaltungen', id, { beteiligte: l }); },
+    setExtra: (i, val) => { const l = cur(); if (l[i]) { l[i] = { ...l[i], rolle: val }; patch('veranstaltungen', id, { beteiligte: l }); } },
+    add: (name, rolle) => {
+      const aid = resolveOrCreateAkteur(name, 'Person');
+      if (!aid) return false;
+      patch('veranstaltungen', id, { beteiligte: [...cur(), { id: aid, rolle }] });
+      ensureAkteurDatalist();
+    },
+  });
+}
+
+function ideeBody(i) {
   let html = '';
-  html += fieldGroup('Text', i.text ? escapeHtml(i.text) : '–', !i.text);
-  html += refListGroup('Akteure', (i.akteure || []).map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.warum)));
-  html += refListGroup('Projekte', (i.veranstaltungen || []).map(vid => {
+  html += kfText('Text', 'text', i.text, { multiline: true, rows: 4, placeholder: 'Von einem Satz bis zu einem Konzept' });
+  html += relEditor('akteure', 'Akteure', (i.akteure || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.warum })), {
+    list: 'akteurNamesList', addPlaceholder: 'Akteur hinzufügen …', extraKey: 'warum', extraPlaceholder: 'Warum',
+  });
+  html += relEditor('projekte', 'Projekte', (i.veranstaltungen || []).map(vid => {
     const v = DATA.veranstaltungen[vid];
-    return v && !v.deleted ? refButton('veranstaltungen', vid, v.titel, formatDateRange(v.datum, v.bis)) : '';
-  }).filter(Boolean));
-  html += fieldGroup('Erstellt', formatDate(i.erstellt));
+    return v && !v.deleted ? { type: 'veranstaltungen', id: vid, label: v.titel || '(ohne Titel)' } : null;
+  }).filter(Boolean), { list: 'veranstaltungTitelList', addPlaceholder: 'Projekt hinzufügen …' });
+  html += fieldGroupRO('Erstellt', formatDate(i.erstellt));
   return html;
 }
 
-function renderKartei() {
+function fieldGroupRO(label, text) {
+  return `<div class="field-group"><div class="field-label">${escapeHtml(label)}</div><div class="field-value">${escapeHtml(text || '–')}</div></div>`;
+}
+
+function wireIdeeBody(host, i) {
+  const { id } = i;
+  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'ideen', id, el.dataset.field));
+  const curA = () => (Store.get('ideen', id).akteure || []).slice();
+  wireRelEditor(host, 'akteure', {
+    remove: k => { const l = curA(); l.splice(k, 1); patch('ideen', id, { akteure: l }); },
+    setExtra: (k, val) => { const l = curA(); if (l[k]) { l[k] = { ...l[k], warum: val }; patch('ideen', id, { akteure: l }); } },
+    add: (name, warum) => {
+      const aid = resolveOrCreateAkteur(name, 'Person');
+      if (!aid) return false;
+      patch('ideen', id, { akteure: [...curA(), { id: aid, warum }] });
+      ensureAkteurDatalist();
+    },
+  });
+  const curV = () => (Store.get('ideen', id).veranstaltungen || []).filter(vid => DATA.veranstaltungen[vid] && !DATA.veranstaltungen[vid].deleted);
+  wireRelEditor(host, 'projekte', {
+    remove: k => { const l = curV(); l.splice(k, 1); patch('ideen', id, { veranstaltungen: l }); },
+    add: name => {
+      const v = Store.list('veranstaltungen').find(x => normalize(x.titel) === normalize(name));
+      if (!v) { announce('Kein Projekt mit diesem Titel'); host.querySelector('[data-rel="projekte"] .rel-add-name').setAttribute('aria-invalid', 'true'); return false; }
+      const l = curV();
+      if (!l.includes(v.id)) patch('ideen', id, { veranstaltungen: [...l, v.id] });
+    },
+  });
+}
+
+/* ---------- Rendern ---------- */
+function renderKartei(opts = {}) {
   const host = $('karteiInner');
   const sel = currentSelection();
   if (!sel) {
@@ -1788,62 +2103,76 @@ function renderKartei() {
   }
   const { type, id } = sel;
   const item = Store.get(type, id);
+  ensureAkteurDatalist();
+  ensureHilfsDatalisten();
+  ensureKnotenDatalist();
   const badges = [];
-  if (type === 'akteure' && istZusammengearbeitet(id)) badges.push('zusammengearbeitet');
-  if (type === 'veranstaltungen' && item.eigene) badges.push('eigenes Projekt');
+  if (type === 'akteure' && istZusammengearbeitet(id) && !item.zusammenarbeit) badges.push('zusammengearbeitet (über eigenes Projekt)');
+  const titleLabel = type === 'akteure' ? 'Name' : 'Titel';
 
   host.innerHTML = `
     <div class="kartei-head">
-      ${karteiHistory.length ? `<button type="button" class="icon-btn kartei-back" id="karteiBack" aria-label="Zurück">
-        <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>` : ''}
       <div class="kartei-head-main">
         <div class="kartei-eyebrow">${TYPE_LABEL[type]}</div>
-        <h2 class="kartei-title" id="karteiTitle" tabindex="-1">${escapeHtml(titleOf(type, item))}</h2>
+        <h2 class="sr-only">Kartei: ${escapeHtml(titleOf(type, item) || 'ohne Titel')}</h2>
+        <label class="sr-only" for="karteiTitle">${titleLabel}</label>
+        <textarea class="kartei-title" id="karteiTitle" rows="1" placeholder="${titleLabel}" spellcheck="false">${escapeHtml(titleOf(type, item) || '')}</textarea>
         ${badges.length ? `<div class="kartei-badges">${badges.map(b => `<span class="text-badge">${escapeHtml(b)}</span>`).join('')}</div>` : ''}
       </div>
     </div>
-    <div class="kartei-body">
+    <div class="kartei-body" id="karteiBody">
       <div class="field-group">
         <div class="field-label" id="knChipsLabel">Knotenpunkte</div>
         <div class="kn-chips" id="knChips" role="group" aria-labelledby="knChipsLabel"></div>
       </div>
-      ${type === 'akteure' ? renderAkteurDetailBody(item) : type === 'veranstaltungen' ? renderVeranstaltungDetailBody(item) : renderIdeeDetailBody(item)}
+      ${type === 'akteure' ? akteurBody(item) : type === 'veranstaltungen' ? projektBody(item) : ideeBody(item)}
     </div>
     <div class="kartei-foot dialog-foot" id="karteiFoot"></div>`;
+
+  // Titel: einzeilig wirkend, umbricht bei Bedarf; Enter verlässt das Feld
+  const t = $('karteiTitle');
+  autosize(t);
+  const titleField = type === 'akteure' ? 'name' : 'titel';
+  bindField(t, type, id, titleField, { after: () => updateNavButtons() });
+  t.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); t.blur(); } });
+
+  const body = $('karteiBody');
+  if (type === 'akteure') wireAkteurBody(body, item);
+  else if (type === 'veranstaltungen') wireProjektBody(body, item);
+  else wireIdeeBody(body, item);
+  body.querySelectorAll('textarea').forEach(autosize);
 
   renderKnotenChips(type, id);
 
   host.querySelectorAll('[data-ref-type]').forEach(btn => {
-    btn.addEventListener('click', () => selectEntry(btn.dataset.refType, btn.dataset.refId, { fromRef: true }));
-  });
-  const back = $('karteiBack');
-  if (back) back.addEventListener('click', () => {
-    const prev = karteiHistory.pop();
-    if (prev) selectEntry(prev.type, prev.id, { viaBack: true, focusKartei: true });
+    btn.addEventListener('click', () => selectEntry(btn.dataset.refType, btn.dataset.refId, { focusKartei: true }));
   });
 
   const foot = $('karteiFoot');
-  const editBtn = document.createElement('button');
-  editBtn.className = 'btn btn-primary';
-  editBtn.type = 'button';
-  editBtn.textContent = 'Bearbeiten';
-  editBtn.addEventListener('click', () => openForm(type, id));
-  foot.appendChild(editBtn);
   if (type === 'akteure') {
     const ideeBtn = document.createElement('button');
     ideeBtn.className = 'btn';
     ideeBtn.type = 'button';
     ideeBtn.textContent = 'Idee mit diesem Akteur';
-    ideeBtn.addEventListener('click', () => openForm('ideen', null, { prefillAkteur: id }));
+    ideeBtn.addEventListener('click', () => createNew('ideen', { akteure: [{ id, warum: '' }] }));
     foot.appendChild(ideeBtn);
   }
+  const saved = document.createElement('span');
+  saved.className = 'kartei-saved';
+  saved.textContent = 'Änderungen werden automatisch gespeichert';
+  foot.appendChild(saved);
   foot.appendChild(Object.assign(document.createElement('div'), { className: 'btn-spacer' }));
   const delBtn = document.createElement('button');
   delBtn.className = 'btn btn-danger';
   delBtn.type = 'button';
   delBtn.textContent = 'Löschen';
-  attachDeleteButton(delBtn, type, id, () => { closeDetail(); renderAll(); });
+  attachDeleteButton(delBtn, type, id, () => { if (draftNew && draftNew.id === id) draftNew = null; closeDetail(); renderAll(); updateNavButtons(); });
   foot.appendChild(delBtn);
+
+  if (opts.focus) {
+    const f = host.querySelector(opts.focus);
+    if (f) f.focus();
+  }
 }
 
 function renderKnotenChips(type, id, opts = {}) {
@@ -1903,6 +2232,7 @@ function openKnotenAddInline(type, id) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); renderKnotenChips(type, id, { focusAdd: true }); }
   });
 }
+
 
 function attachDeleteButton(btn, type, id, onDeleted) {
   let armed = false;
@@ -1977,9 +2307,15 @@ function switchView(view, { focus = false } = {}) {
 
 /* =========================================================================
    Spaltenbreiten & Einklappen
+   Trenner (role=separator, Muster «Window Splitter»):
+   - ziehen ändert die Breite; ganz einziehen klappt die Spalte ein,
+     aus dem eingeklappten Zustand herausziehen klappt sie wieder aus
+   - Doppelklick oder Enter: ein-/ausklappen
+   - Pfeiltasten: Breite (⇧ = grössere Schritte); unter die Mindestbreite → einklappen
    ========================================================================= */
 const LAYOUT_KEY = 'feld_layout_v1';
 const LIMITS = { knoten: [160, 420], kartei: [300, 760] };
+const COLLAPSE_AT = { knoten: 100, kartei: 200 };   // rohe Zugbreite, unter der eingeklappt wird
 let layout = { knoten: 230, kartei: 420, knotenCollapsed: false, karteiCollapsed: false };
 
 function loadLayout() {
@@ -1991,22 +2327,31 @@ function applyLayout() {
   const root = document.documentElement.style;
   root.setProperty('--w-knoten', layout.knoten + 'px');
   root.setProperty('--w-kartei', layout.kartei + 'px');
-  [['knoten', 'Knoten', 'Knotenpunkte'], ['kartei', 'Kartei', 'Kartei']].forEach(([key, Cap, label]) => {
+  [['knoten', 'Knoten'], ['kartei', 'Kartei']].forEach(([key, Cap]) => {
     const collapsed = layout[key + 'Collapsed'];
     $('col' + Cap).classList.toggle('collapsed', collapsed);
     $(key + 'Collapse').setAttribute('aria-expanded', String(!collapsed));
     $(key + 'Rail').setAttribute('aria-expanded', String(!collapsed));
-    $('resize' + Cap).hidden = collapsed;
     const sep = $('resize' + Cap);
-    sep.setAttribute('aria-valuemin', LIMITS[key][0]);
+    sep.classList.toggle('is-collapsed', collapsed);
+    sep.setAttribute('aria-valuemin', 0);
     sep.setAttribute('aria-valuemax', LIMITS[key][1]);
-    sep.setAttribute('aria-valuenow', layout[key]);
-    sep.setAttribute('aria-valuetext', `${layout[key]} Pixel`);
+    sep.setAttribute('aria-valuenow', collapsed ? 0 : layout[key]);
+    sep.setAttribute('aria-valuetext', collapsed ? 'eingeklappt' : `${layout[key]} Pixel`);
   });
 }
 
+function clampW(key, w) { return Math.round(Math.min(LIMITS[key][1], Math.max(LIMITS[key][0], w))); }
+
+function setCollapsed(key, collapsed) {
+  layout[key + 'Collapsed'] = collapsed;
+  applyLayout();
+  saveLayout();
+}
+
 function setWidth(key, w) {
-  layout[key] = Math.round(Math.min(LIMITS[key][1], Math.max(LIMITS[key][0], w)));
+  layout[key] = clampW(key, w);
+  layout[key + 'Collapsed'] = false;
   applyLayout();
   saveLayout();
 }
@@ -2015,32 +2360,53 @@ function wireLayout() {
   [['knoten', 'Knoten', 1], ['kartei', 'Kartei', -1]].forEach(([key, Cap, dir]) => {
     const sep = $('resize' + Cap);
     sep.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
       e.preventDefault();
       sep.setPointerCapture(e.pointerId);
       sep.classList.add('dragging');
-      const startX = e.clientX, startW = layout[key];
-      const move = ev => setWidth(key, startW + dir * (ev.clientX - startX));
+      document.body.classList.add('is-resizing');
+      const startX = e.clientX;
+      const startW = layout[key + 'Collapsed'] ? 40 : layout[key];
+      const move = ev => {
+        const raw = startW + dir * (ev.clientX - startX);
+        if (raw < COLLAPSE_AT[key]) {
+          if (!layout[key + 'Collapsed']) { layout[key + 'Collapsed'] = true; applyLayout(); }
+        } else {
+          layout[key] = clampW(key, raw);
+          layout[key + 'Collapsed'] = false;
+          applyLayout();
+        }
+      };
       const up = () => {
         sep.classList.remove('dragging');
+        document.body.classList.remove('is-resizing');
         sep.removeEventListener('pointermove', move);
         sep.removeEventListener('pointerup', up);
+        sep.removeEventListener('pointercancel', up);
+        saveLayout();
       };
       sep.addEventListener('pointermove', move);
       sep.addEventListener('pointerup', up);
+      sep.addEventListener('pointercancel', up);
     });
+    sep.addEventListener('dblclick', () => setCollapsed(key, !layout[key + 'Collapsed']));
     sep.addEventListener('keydown', e => {
       const step = e.shiftKey ? 48 : 16;
-      if (e.key === 'ArrowLeft') { e.preventDefault(); setWidth(key, layout[key] - dir * step); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); setWidth(key, layout[key] + dir * step); }
-      if (e.key === 'Home') { e.preventDefault(); setWidth(key, LIMITS[key][0]); }
+      const collapsed = layout[key + 'Collapsed'];
+      const grow = (e.key === 'ArrowRight' && dir > 0) || (e.key === 'ArrowLeft' && dir < 0);
+      const shrink = (e.key === 'ArrowLeft' && dir > 0) || (e.key === 'ArrowRight' && dir < 0);
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed(key, !collapsed); return; }
+      if (grow) { e.preventDefault(); collapsed ? setWidth(key, LIMITS[key][0]) : setWidth(key, layout[key] + step); }
+      if (shrink && !collapsed) {
+        e.preventDefault();
+        if (layout[key] <= LIMITS[key][0]) setCollapsed(key, true);
+        else setWidth(key, layout[key] - step);
+      }
+      if (e.key === 'Home') { e.preventDefault(); setCollapsed(key, true); }
       if (e.key === 'End') { e.preventDefault(); setWidth(key, LIMITS[key][1]); }
     });
-    $(key + 'Collapse').addEventListener('click', () => {
-      layout[key + 'Collapsed'] = true; applyLayout(); saveLayout(); $(key + 'Rail').focus();
-    });
-    $(key + 'Rail').addEventListener('click', () => {
-      layout[key + 'Collapsed'] = false; applyLayout(); saveLayout(); $(key + 'Collapse').focus();
-    });
+    $(key + 'Collapse').addEventListener('click', () => { setCollapsed(key, true); $(key + 'Rail').focus(); });
+    $(key + 'Rail').addEventListener('click', () => { setCollapsed(key, false); $(key + 'Collapse').focus(); });
   });
   // Schmale Bildschirme: Spalten als Overlay
   $('knotenOpenNarrow').addEventListener('click', () => { document.body.classList.add('knoten-open'); $('knotenCloseNarrow').focus(); });
@@ -2051,6 +2417,7 @@ function wireLayout() {
     (row ? row.querySelector('.entry') : $('listSort')).focus();
   });
 }
+
 
 /* =========================================================================
    Datalists (Namensvorschläge für Formulare)
@@ -2082,418 +2449,6 @@ function ensureHilfsDatalisten() {
   ensureDatalist('formatList', Array.from(formate).sort((a, b) => a.localeCompare(b, 'de')));
   ensureDatalist('reiheList', Array.from(reihen).sort((a, b) => a.localeCompare(b, 'de')));
   ensureDatalist('veranstaltungTitelList', Store.list('veranstaltungen').map(v => v.titel).sort((a, b) => a.localeCompare(b, 'de')));
-}
-
-/* =========================================================================
-   Sub-Zeilen-Editor (Beteiligte / Akteure mit Begründung / Veranstaltungen)
-   ========================================================================= */
-function buildSubRowsEditor(container, initialRows, columns, addLabel) {
-  container.innerHTML = '';
-  const addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.className = 'sub-row-add';
-  addBtn.textContent = addLabel || '+ Zeile';
-  container.appendChild(addBtn);
-
-  function addRow(values) {
-    values = values || {};
-    const row = document.createElement('div');
-    row.className = 'sub-row';
-    columns.forEach(col => {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = col.placeholder || '';
-      input.dataset.key = col.key;
-      if (col.list) input.setAttribute('list', col.list);
-      input.value = values[col.key] || '';
-      row.appendChild(input);
-    });
-    const rm = document.createElement('button');
-    rm.type = 'button';
-    rm.className = 'sub-row-remove';
-    rm.textContent = '×';
-    rm.setAttribute('aria-label', 'Zeile entfernen');
-    rm.addEventListener('click', () => row.remove());
-    row.appendChild(rm);
-    container.insertBefore(row, addBtn);
-  }
-
-  addBtn.addEventListener('click', () => addRow());
-  (initialRows || []).forEach(r => addRow(r));
-
-  return {
-    getValues() {
-      return Array.from(container.querySelectorAll('.sub-row')).map(row => {
-        const obj = {};
-        columns.forEach(col => { obj[col.key] = row.querySelector(`[data-key="${col.key}"]`).value.trim(); });
-        return obj;
-      }).filter(obj => obj[columns[0].key]);
-    },
-    addRow,
-  };
-}
-
-/* =========================================================================
-   Themen-Picker (kontrolliertes Vokabular, im Interface erweiterbar)
-   ========================================================================= */
-function buildThemePicker(fieldEl, selectedThemen) {
-  const pickerEl = fieldEl.querySelector('.theme-picker');
-  const addInput = fieldEl.querySelector('.theme-add-input');
-  const addBtn = fieldEl.querySelector('.theme-add-btn');
-
-  function render() {
-    pickerEl.innerHTML = DATA.themenVokabular.map(t =>
-      `<button type="button" class="chip" data-theme="${escapeHtml(t)}" aria-pressed="${selectedThemen.includes(t)}">${escapeHtml(t)}</button>`
-    ).join('');
-    pickerEl.querySelectorAll('.chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const t = chip.dataset.theme;
-        const idx = selectedThemen.indexOf(t);
-        if (idx > -1) selectedThemen.splice(idx, 1); else selectedThemen.push(t);
-        render();
-      });
-    });
-  }
-  render();
-
-  addBtn.addEventListener('click', () => {
-    const val = addInput.value.trim();
-    if (!val) return;
-    if (!DATA.themenVokabular.includes(val)) DATA.themenVokabular.push(val);
-    if (!selectedThemen.includes(val)) selectedThemen.push(val);
-    addInput.value = '';
-    render();
-  });
-  addInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
-  });
-
-  return { getValues: () => selectedThemen.slice() };
-}
-
-/* =========================================================================
-   Formulare: Vorlagen & Verdrahtung
-   ========================================================================= */
-function formTemplate(type) {
-  if (type === 'akteure') return `
-    <div class="form-field">
-      <label for="f-name">Name <span class="req">*</span></label>
-      <input type="text" id="f-name" required>
-    </div>
-    <div class="form-field">
-      <label>Art</label>
-      <div class="radio-row">
-        <label><input type="radio" name="f-art" value="Person"> Person</label>
-        <label><input type="radio" name="f-art" value="Initiative"> Initiative</label>
-        <label><input type="radio" name="f-art" value="Institution"> Institution</label>
-      </div>
-    </div>
-    <div class="form-field">
-      <label for="f-zu">Gehört zu</label>
-      <input type="text" id="f-zu" list="akteurNamesList" placeholder="Name einer Institution/Initiative …">
-    </div>
-    <div class="form-field">
-      <label for="f-ort">Ort</label>
-      <input type="text" id="f-ort">
-    </div>
-    <div class="form-field" id="f-themen-field">
-      <label>Knotenpunkte</label>
-      <div class="theme-picker"></div>
-      <div class="theme-add-row">
-        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
-        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
-      </div>
-    </div>
-    <div class="form-field">
-      <label for="f-web">Web</label>
-      <input type="text" id="f-web" placeholder="ohne https://">
-    </div>
-    <div class="form-field">
-      <label for="f-kurznotiz">Aufgenommen, weil <span style="font-weight:400">— erscheint in der Liste unter dem Namen</span></label>
-      <input type="text" id="f-kurznotiz" maxlength="${KURZNOTIZ_MAXLEN}">
-      <div class="form-field-hint" id="f-kurznotiz-hint"></div>
-    </div>
-    <div class="form-field">
-      <label for="f-notiz">Notiz</label>
-      <textarea id="f-notiz"></textarea>
-    </div>
-    <div class="form-field checkbox-field">
-      <input type="checkbox" id="f-zusammenarbeit">
-      <label for="f-zusammenarbeit">Zusammenarbeit (manuell, ohne eigene Veranstaltung)</label>
-    </div>
-    <div class="form-field">
-      <label for="f-quelle">Quelle</label>
-      <input type="text" id="f-quelle">
-    </div>`;
-
-  if (type === 'veranstaltungen') return `
-    <div class="form-field">
-      <label for="f-titel">Titel <span class="req">*</span></label>
-      <input type="text" id="f-titel" required>
-    </div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="f-datum">Datum <span style="font-weight:400">(optional)</span></label>
-        <input type="date" id="f-datum">
-      </div>
-      <div class="form-field">
-        <label for="f-bis">Bis</label>
-        <input type="date" id="f-bis">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="f-zeit">Zeit</label>
-        <input type="text" id="f-zeit" placeholder="z. B. 19-20, ab 18">
-      </div>
-      <div class="form-field">
-        <label for="f-ort">Ort</label>
-        <input type="text" id="f-ort">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="f-format">Format</label>
-        <input type="text" id="f-format" list="formatList" placeholder="Spaziergang, Lesekreis …">
-      </div>
-      <div class="form-field">
-        <label for="f-reihe">Reihe</label>
-        <input type="text" id="f-reihe" list="reiheList">
-      </div>
-    </div>
-    <div class="form-field checkbox-field">
-      <input type="checkbox" id="f-eigene">
-      <label for="f-eigene">Eigenes Projekt</label>
-    </div>
-    <div class="form-field" id="f-themen-field">
-      <label>Knotenpunkte</label>
-      <div class="theme-picker"></div>
-      <div class="theme-add-row">
-        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
-        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
-      </div>
-    </div>
-    <div class="form-field">
-      <label>Beteiligte</label>
-      <div class="sub-rows" id="f-beteiligte"></div>
-    </div>
-    <div class="form-field">
-      <label for="f-beschrieb">Beschrieb</label>
-      <textarea id="f-beschrieb"></textarea>
-    </div>
-    <div class="form-field">
-      <label for="f-quelle">Quelle</label>
-      <input type="text" id="f-quelle">
-    </div>`;
-
-  return `
-    <div class="form-field">
-      <label for="f-titel">Titel <span class="req">*</span></label>
-      <input type="text" id="f-titel" required>
-    </div>
-    <div class="form-field">
-      <label for="f-text">Text</label>
-      <textarea id="f-text"></textarea>
-    </div>
-    <div class="form-field" id="f-themen-field">
-      <label>Knotenpunkte</label>
-      <div class="theme-picker"></div>
-      <div class="theme-add-row">
-        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
-        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
-      </div>
-    </div>
-    <div class="form-field">
-      <label>Akteure</label>
-      <div class="sub-rows" id="f-akteure"></div>
-    </div>
-    <div class="form-field">
-      <label>Projekte</label>
-      <div class="sub-rows" id="f-veranstaltungen"></div>
-    </div>
-`;
-}
-
-function wireAkteurForm(item) {
-  $('f-name').value = item.name || '';
-  (document.querySelectorAll('input[name="f-art"]') || []).forEach(r => { r.checked = r.value === (item.art || 'Person'); });
-  $('f-zu').value = item.zu ? (akteurName(item.zu) || '') : '';
-  $('f-ort').value = item.ort || '';
-  $('f-web').value = item.web || '';
-  $('f-kurznotiz').value = item.kurznotiz || '';
-  $('f-notiz').value = item.notiz || '';
-  $('f-zusammenarbeit').checked = !!item.zusammenarbeit;
-  $('f-quelle').value = item.quelle || '';
-  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
-
-  const kurznotizInput = $('f-kurznotiz');
-  const kurznotizHint = $('f-kurznotiz-hint');
-  function updateKurznotizHint() {
-    kurznotizHint.textContent = `${kurznotizInput.value.length} / ${KURZNOTIZ_MAXLEN}`;
-  }
-  kurznotizInput.addEventListener('input', updateKurznotizHint);
-  updateKurznotizHint();
-
-  return () => ({
-    name: $('f-name').value.trim(),
-    art: document.querySelector('input[name="f-art"]:checked')?.value || 'Person',
-    zu: resolveOrCreateAkteur($('f-zu').value, 'Institution') || '',
-    ort: $('f-ort').value.trim(),
-    themen: themePicker.getValues(),
-    web: $('f-web').value.trim().replace(/^https?:\/\//, ''),
-    kurznotiz: $('f-kurznotiz').value.trim(),
-    notiz: $('f-notiz').value.trim(),
-    zusammenarbeit: $('f-zusammenarbeit').checked,
-    quelle: $('f-quelle').value.trim(),
-  });
-}
-
-function wireVeranstaltungForm(item) {
-  ensureHilfsDatalisten();
-  $('f-titel').value = item.titel || '';
-  $('f-datum').value = item.datum || '';
-  $('f-bis').value = item.bis || '';
-  $('f-zeit').value = item.zeit || '';
-  $('f-ort').value = item.ort || '';
-  $('f-format').value = item.format || '';
-  $('f-reihe').value = item.reihe || '';
-  $('f-eigene').checked = !!item.eigene;
-  const beteiligteRows = (item.beteiligte || []).map(b => ({ name: akteurName(b.id) || '', rolle: b.rolle || '' }));
-  const beteiligteEditor = buildSubRowsEditor($('f-beteiligte'), beteiligteRows,
-    [{ key: 'name', placeholder: 'Name', list: 'akteurNamesList' }, { key: 'rolle', placeholder: 'Rolle', list: 'roleList' }],
-    '+ Beteiligte/r');
-  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
-  $('f-beschrieb').value = item.beschrieb || '';
-  $('f-quelle').value = item.quelle || '';
-
-  return () => ({
-    titel: $('f-titel').value.trim(),
-    datum: $('f-datum').value,
-    bis: $('f-bis').value,
-    zeit: $('f-zeit').value.trim(),
-    ort: $('f-ort').value.trim(),
-    format: $('f-format').value.trim(),
-    reihe: $('f-reihe').value.trim(),
-    eigene: $('f-eigene').checked,
-    themen: themePicker.getValues(),
-    beteiligte: beteiligteEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), rolle: r.rolle })).filter(r => r.id),
-    beschrieb: $('f-beschrieb').value.trim(),
-    quelle: $('f-quelle').value.trim(),
-  });
-}
-
-function wireIdeeForm(item, opts) {
-  ensureHilfsDatalisten();
-  $('f-titel').value = item.titel || '';
-  $('f-text').value = item.text || '';
-  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
-  let akteureRows = (item.akteure || []).map(a => ({ name: akteurName(a.id) || '', warum: a.warum || '' }));
-  if (!akteureRows.length && opts && opts.prefillAkteur) {
-    akteureRows = [{ name: akteurName(opts.prefillAkteur) || '', warum: '' }];
-  }
-  const akteureEditor = buildSubRowsEditor($('f-akteure'), akteureRows,
-    [{ key: 'name', placeholder: 'Name', list: 'akteurNamesList' }, { key: 'warum', placeholder: 'Warum' }],
-    '+ Akteur');
-  const veranstaltungenRows = (item.veranstaltungen || [])
-    .map(vid => { const v = DATA.veranstaltungen[vid]; return v && !v.deleted ? { name: v.titel } : null; })
-    .filter(Boolean);
-  const veranstaltungenEditor = buildSubRowsEditor($('f-veranstaltungen'), veranstaltungenRows,
-    [{ key: 'name', placeholder: 'Titel des Projekts', list: 'veranstaltungTitelList' }],
-    '+ Projekt');
-
-  return () => {
-    let reihenfolge = item.reihenfolge;
-    if (reihenfolge == null) {
-      const siblings = Store.list('ideen').filter(i => i.id !== item.id);
-      reihenfolge = siblings.length ? Math.max(...siblings.map(s => s.reihenfolge || 0)) + 10 : 10;
-    }
-    return {
-      titel: $('f-titel').value.trim(),
-      text: $('f-text').value.trim(),
-      themen: themePicker.getValues(),
-      akteure: akteureEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), warum: r.warum })).filter(r => r.id),
-      veranstaltungen: veranstaltungenEditor.getValues()
-        .map(r => Store.list('veranstaltungen').find(v => normalize(v.titel) === normalize(r.name))?.id)
-        .filter(Boolean),
-      reihenfolge,
-    };
-  };
-}
-
-function openForm(type, id, opts = {}) {
-  const isNew = !id;
-  const item = isNew ? {} : Store.get(type, id);
-  if (!isNew && !item) return;
-  ensureAkteurDatalist();
-
-  $('formEyebrow').textContent = (isNew ? 'Neu' : 'Bearbeiten') + ' · ' + TYPE_LABEL[type];
-  $('formTitle').textContent = isNew ? NEU_LABEL[type] : (type === 'akteure' ? item.name : item.titel);
-
-  const body = $('formBody');
-  body.innerHTML = formTemplate(type);
-
-  const collect = type === 'akteure' ? wireAkteurForm(item)
-    : type === 'veranstaltungen' ? wireVeranstaltungForm(item)
-    : wireIdeeForm(item, opts);
-
-  renderFormFoot(type, isNew ? null : id, collect, isNew);
-
-  body.onsubmit = (e) => {
-    e.preventDefault();
-    const fields = collect();
-    const wasNew = isNew;
-    const savedId = Store.put(type, isNew ? null : id, fields);
-    closeForm();
-    renderAll();
-    selectEntry(type, savedId, { focusKartei: true });
-    announce(`${TYPE_LABEL[type]} gespeichert`);
-  };
-
-  if (!$('formDialog').open) $('formDialog').showModal();
-  body.querySelector('input, textarea').focus();
-}
-
-function renderFormFoot(type, id, collect, isNew) {
-  const foot = $('formFoot');
-  foot.innerHTML = '';
-
-  if (!isNew) {
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-danger';
-    delBtn.type = 'button';
-    delBtn.textContent = 'Löschen';
-    attachDeleteButton(delBtn, type, id, () => {
-      closeForm();
-      closeDetail();
-      renderAll();
-    });
-    foot.appendChild(delBtn);
-  }
-
-  foot.appendChild(Object.assign(document.createElement('div'), { className: 'btn-spacer' }));
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn btn-ghost';
-  cancelBtn.type = 'button';
-  cancelBtn.textContent = 'Abbrechen';
-  cancelBtn.addEventListener('click', closeForm);
-  foot.appendChild(cancelBtn);
-
-  const saveBtn = document.createElement('button');
-  saveBtn.className = 'btn btn-primary';
-  saveBtn.type = 'submit';
-  saveBtn.setAttribute('form', '');
-  saveBtn.textContent = 'Speichern';
-  saveBtn.addEventListener('click', (e) => {
-    // Formular liegt ausserhalb des Footers im DOM -> submit manuell auslösen
-    e.preventDefault();
-    $('formBody').requestSubmit();
-  });
-  foot.appendChild(saveBtn);
-}
-
-function closeForm() {
-  if ($('formDialog').open) $('formDialog').close();
 }
 
 /* =========================================================================
@@ -2734,7 +2689,7 @@ function renderThemaVocabSettings() {
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 function wireTabs() {
-  AREAS.forEach(v => $('tab-' + v).addEventListener('click', () => switchView(v)));
+  AREAS.forEach(v => $('tab-' + v).addEventListener('click', () => { discardEmptyDraft(); switchView(v); }));
   $('tabs').addEventListener('keydown', e => {
     const idx = AREAS.indexOf(currentView);
     let next = null;
@@ -2742,7 +2697,7 @@ function wireTabs() {
     if (e.key === 'ArrowLeft') next = AREAS[(idx - 1 + AREAS.length) % AREAS.length];
     if (e.key === 'Home') next = AREAS[0];
     if (e.key === 'End') next = AREAS[AREAS.length - 1];
-    if (next) { e.preventDefault(); switchView(next, { focus: true }); }
+    if (next) { e.preventDefault(); discardEmptyDraft(); switchView(next, { focus: true }); }
   });
 }
 
@@ -2769,7 +2724,7 @@ function wireSearch() {
 }
 
 function wireListe() {
-  $('btnPlus').addEventListener('click', () => openForm(TAB_TYPE[currentView], null));
+  $('btnPlus').addEventListener('click', () => createNew(TAB_TYPE[currentView]));
   $('listSort').addEventListener('change', () => {
     listSort[currentView] = $('listSort').value;
     try { localStorage.setItem(SORT_KEY, JSON.stringify(listSort)); } catch (e) {}
@@ -2792,7 +2747,7 @@ function wireListe() {
     if (!next) return;
     e.preventDefault();
     next.focus();
-    next.click();
+    selectEntry(TAB_TYPE[currentView], next.closest('.entry-row').dataset.id, { replace: true });
   });
 }
 
@@ -2807,7 +2762,8 @@ function wireKnotenDialog() {
 }
 
 function wireDialogs() {
-  $('formClose').addEventListener('click', closeForm);
+  $('navBack').addEventListener('click', () => navGo(-1));
+  $('navFwd').addEventListener('click', () => navGo(1));
 }
 
 function wireSettings() {
@@ -2880,7 +2836,7 @@ function wireSettings() {
 }
 
 function anyDialogOpen() {
-  return ['formDialog', 'settingsDialog', 'knotenDialog'].some(id => $(id).open);
+  return ['settingsDialog', 'knotenDialog'].some(id => $(id).open);
 }
 
 function wireKeyboard() {
@@ -2893,6 +2849,13 @@ function wireKeyboard() {
       e.preventDefault();
       $('searchInput').focus();
       $('searchInput').select();
+      return;
+    }
+    // ⌘[ / ⌘] (Strg+[ / Strg+]) und Alt+←/→ ausserhalb von Eingabefeldern: Verlauf
+    if (!anyDialogOpen() && (((e.metaKey || e.ctrlKey) && (e.key === '[' || e.key === ']'))
+        || (e.altKey && !isTyping && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')))) {
+      e.preventDefault();
+      navGo(e.key === '[' || e.key === 'ArrowLeft' ? -1 : 1);
       return;
     }
     if (e.key === '/' && !isTyping && !anyDialogOpen()) {
@@ -2937,6 +2900,7 @@ function init() {
   ensureVokabular();
   ensureKnotenDatalist();
   switchView(currentView);
+  updateNavButtons();
 
   setSyncStatus(syncConfig ? 'idle' : 'off');
   if (syncConfig) syncNow();
