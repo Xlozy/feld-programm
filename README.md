@@ -1,7 +1,7 @@
 # Feld
 
 Persönliches Arbeitswerkzeug: Verzeichnis für Gehkultur und Spaziergangswissenschaft.
-Überblickt das Feld, in dem gearbeitet wird — Akteure, Veranstaltungen und Ideen als ein Netz.
+Überblickt das Feld, in dem gearbeitet wird — Akteure, Projekte und Ideen, verbunden über Knotenpunkte.
 
 Konzept und Datenmodell: siehe `../_App Konzept/KONZEPT.md`.
 
@@ -23,6 +23,6 @@ GitHub-Sync mit dem Daten-Repo verbinden, oder eine JSON-Datei importieren.
 
 ## Icons
 
-`icon.svg` ist die bearbeitbare Quelle (drei verbundene Knoten = die drei Objekttypen als ein
-Netz). PNG-Grössen und `favicon.ico` sind daraus exportiert — bei Änderungen am Motiv müssen sie
+`icon.svg` ist die bearbeitbare Quelle (sechs verbundene Knoten als Sechseck = Knotenpunkte in
+einem Netz). PNG-Grössen und `favicon.ico` sind daraus exportiert — bei Änderungen am Motiv müssen sie
 neu gerendert werden (z. B. mit Pillow, Rezept siehe Session-Notiz).
