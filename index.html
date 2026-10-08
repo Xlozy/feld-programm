@@ -6,755 +6,590 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Feld">
-<meta name="theme-color" content="#0a0a0a">
+<meta name="theme-color" content="#15171a">
 <link rel="manifest" href="site.webmanifest">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
 <title>Feld</title>
 <style>
+/* Palette «Graphit» (Design F2) */
 :root {
-  --bg: #0a0a0a;
-  --surface: #161616;
-  --surface-2: #1f1f1f;
-  --surface-3: #262626;
-  --border: #2a2a2a;
-  --text: #ededed;
-  --text-dim: #8a8a8a;
-  --text-dimmer: #5f5f5f;
-  --accent: #60a5fa;
-  --accent-dim: #3b6ea8;
-  --warn: #f59e0b;
-  --danger: #ef4444;
-  --diamond: #c084fc;
-  --focus: #60a5fa;
+  --bg: #1c1f23;          /* Einträge */
+  --side: #15171a;        /* Topbar, Knotenpunkte */
+  --kartei: #22262b;      /* Kartei */
+  --raised: #262a30;      /* Dialoge, Menüs */
+  --line: #2c3036;
+  --line-2: #343940;
+  --line-3: #454c57;
+  --text: #e8e9eb;
+  --text-2: #c3c8ce;
+  --muted: #9aa0a8;       /* kleiner Text, ≥ 4.5:1 auf allen Flächen */
+  --faint: #6f7680;       /* nur Linien/Deko, nicht für Text */
+  --sel: #2a3038;
+  --row-sel: #262b33;
+  --accent: #8db4ff;
+  --accent-ink: #0f1726;
+  --chip-bg: #2a3550;
+  --chip-line: #3d4d70;
+  --chip-fg: #b3ccff;
+  --diamond: #c4a5ff;
+  --warn: #f5b84a;
+  --danger: #ff9b8a;
+  --danger-line: #7a3a33;
+  --focus: #8db4ff;
+  --w-knoten: 230px;
+  --w-kartei: 420px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  padding-top: env(safe-area-inset-top);
-}
-a { color: inherit; }
-button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-.sr-only {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
   overflow: hidden;
-  clip: rect(0,0,0,0);
-  white-space: nowrap;
-  border: 0;
 }
+a { color: var(--accent); }
+a:hover { color: var(--chip-fg); }
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+[hidden] { display: none !important; }
 
-/* ---------- Header ---------- */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 16px;
-  padding-top: calc(10px + env(safe-area-inset-top));
-}
-.header-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.header-title {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
-}
-.search-wrap {
-  flex: 1 1 200px;
-  min-width: 120px;
-  position: relative;
-}
-.search-wrap input[type="search"] {
-  width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 10px 7px 30px;
-  color: var(--text);
-}
-.search-wrap input[type="search"]::placeholder { color: var(--text-dimmer); }
-.search-wrap svg {
-  position: absolute;
-  left: 9px; top: 50%;
-  transform: translateY(-50%);
-  width: 14px; height: 14px;
-  stroke: var(--text-dim);
-  pointer-events: none;
-}
-.search-wrap input[type="search"]::-webkit-search-cancel-button { display: none; }
-.search-clear {
-  position: absolute;
-  right: 4px; top: 50%;
-  transform: translateY(-50%);
-  background: none; border: none;
-  color: var(--text-dim);
-  width: 22px; height: 22px;
-  border-radius: 5px;
-  cursor: pointer;
-  display: none;
-  font-size: 16px;
-  line-height: 1;
-}
-.search-wrap.has-value .search-clear { display: block; }
-.search-clear:hover { background: var(--surface-3); color: var(--text); }
-
-.icon-btn {
-  background: none;
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* ---------- Topbar ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 18px;
+  min-height: 52px; padding: 8px 16px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  background: var(--side);
+  border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
-.icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; }
-.icon-btn:hover { background: var(--surface-2); color: var(--text); }
-.sync-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--text-dimmer);
+.brand { font-size: 18px; font-weight: 700; letter-spacing: 0.01em; }
+.areas { display: flex; gap: 2px; }
+.areas button {
+  background: none; border: 0; border-radius: 6px;
+  padding: 6px 12px; color: var(--muted); font-weight: 600;
 }
+.areas button:hover { color: var(--text); background: var(--sel); }
+.areas button[aria-selected="true"] { color: var(--text); background: var(--sel); }
+.topbar-spacer { flex: 1; }
+.search { position: relative; width: 280px; }
+.search input {
+  width: 100%; height: 34px;
+  background: var(--bg); border: 1px solid var(--line-2); border-radius: 7px;
+  padding: 0 64px 0 32px; color: var(--text);
+}
+.search input::placeholder { color: var(--muted); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; stroke: var(--muted); fill: none; pointer-events: none;
+}
+.kbd-hint {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font: 600 11px/1 inherit; font-family: inherit; color: var(--muted);
+  border: 1px solid var(--line-2); border-radius: 4px; padding: 3px 5px; pointer-events: none;
+}
+.search.has-value .kbd-hint { display: none; }
+.search-clear {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; border: 0; border-radius: 5px;
+  background: none; color: var(--muted); font-size: 17px; line-height: 1; display: none;
+}
+.search.has-value .search-clear { display: block; }
+.search-clear:hover { background: var(--sel); color: var(--text); }
+.icon-btn {
+  width: 32px; height: 32px; border: 1px solid transparent; border-radius: 7px;
+  background: none; color: var(--muted);
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; }
+.icon-btn:hover { background: var(--sel); color: var(--text); }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .sync-dot.idle { background: #4ade80; }
-.sync-dot.syncing { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+.sync-dot.syncing { background: var(--warn); }
 .sync-dot.error { background: var(--danger); }
 @media (prefers-reduced-motion: no-preference) {
+  .sync-dot.syncing { animation: pulse 1s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
 }
 
-.btn-new {
-  background: var(--accent);
-  color: #0a0a0a;
-  border: none;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
+/* ---------- Spalten ---------- */
+.columns { flex: 1; display: flex; min-height: 0; }
+.col { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+#colKnoten { width: var(--w-knoten); background: var(--side); flex-shrink: 0; }
+#colListe { flex: 1; min-width: 280px; background: var(--bg); }
+#colKartei { width: var(--w-kartei); background: var(--kartei); flex-shrink: 0; }
+.col.collapsed { width: 40px !important; min-width: 40px; }
+.col-content { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.col.collapsed .col-content { display: none; }
+.col-rail { display: none; }
+.col.collapsed .col-rail {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  width: 40px; height: 100%; padding-top: 10px;
+  background: none; border: 0; color: var(--muted);
 }
-.btn-new:hover { filter: brightness(1.08); }
+.col.collapsed .col-rail:hover { color: var(--text); background: var(--sel); }
+.col-rail-label { writing-mode: vertical-rl; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.resizer {
+  flex: 0 0 5px; cursor: col-resize; background: transparent;
+  border-left: 1px solid var(--line); position: relative; z-index: 2;
+}
+.resizer:hover, .resizer.dragging { background: var(--line-2); }
+.resizer:focus-visible { outline: none; background: var(--accent); }
+.col-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px 8px 14px; min-height: 46px; flex-shrink: 0;
+}
+.col-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.col-head .grow { flex: 1; }
+.collapse-btn { width: 28px; height: 28px; }
+.collapse-btn svg { width: 15px; height: 15px; }
+.mini-select {
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--muted); font-size: 12.5px; padding: 3px 4px;
+}
+.mini-select:hover { border-color: var(--line-2); color: var(--text); }
+.mini-select option { background: var(--raised); color: var(--text); }
+.only-narrow { display: none !important; }
 
-/* ---------- Tabs ---------- */
-nav[role="tablist"] {
-  display: flex;
-  gap: 2px;
-  margin-top: 10px;
+/* ---------- Knotenpunkte ---------- */
+.kn-list { list-style: none; overflow-y: auto; flex: 1; padding: 0 8px 8px; }
+.kn-row { display: flex; align-items: center; gap: 2px; border-radius: 6px; margin-bottom: 1px; }
+.kn-row.is-sel { background: var(--sel); }
+.kn-btn {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 8px 0 10px; border: 0; border-radius: 6px;
+  background: none; color: var(--text-2); text-align: left;
 }
-nav[role="tablist"] button {
-  flex: 1;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-dim);
-  padding: 9px 6px;
-  font-weight: 600;
-  font-size: 13.5px;
-  cursor: pointer;
-  border-radius: 6px 6px 0 0;
+.kn-btn:hover { background: var(--sel); color: var(--text); }
+.kn-row.is-sel .kn-btn { color: #fff; font-weight: 600; }
+.kn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kn-check { color: var(--accent); font-size: 12px; }
+.kn-count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 400; }
+.kn-more {
+  width: 26px; height: 26px; margin-right: 3px; border: 0; border-radius: 5px;
+  background: #3a4250; color: var(--text); flex-shrink: 0; line-height: 1;
 }
-nav[role="tablist"] button:hover { background: var(--surface-2); }
-nav[role="tablist"] button[aria-selected="true"] {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-}
-nav[role="tablist"] button .count {
-  color: var(--text-dimmer);
-  font-weight: 400;
-  margin-left: 3px;
-}
-nav[role="tablist"] button[aria-selected="true"] .count { color: var(--text-dim); }
+.kn-more:hover, .kn-more[aria-expanded="true"] { background: #4a5466; }
+.kn-hint { padding: 8px 18px 12px; color: var(--muted); font-size: 12px; line-height: 1.4; flex-shrink: 0; }
+.kn-empty { padding: 10px; color: var(--muted); font-size: 13px; }
 
-/* ---------- Main / Toolbar ---------- */
-main {
-  flex: 1;
-  padding: 14px 16px 60px;
-  max-width: 920px;
-  width: 100%;
-  margin: 0 auto;
+/* ---------- Menü (⋯) ---------- */
+.menu {
+  position: fixed; z-index: 50; min-width: 200px;
+  background: #2a2f36; border: 1px solid #3d444e; border-radius: 10px; padding: 6px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+  display: flex; flex-direction: column;
 }
-.view[hidden] { display: none; }
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 14px;
+.menu button {
+  text-align: left; height: 34px; padding: 0 10px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text);
 }
-.chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  border-radius: 999px;
-  padding: 5px 12px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.chip[aria-pressed="true"] {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: #fff;
-}
-.chip:hover { border-color: var(--text-dim); }
-select.filter-select {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 13px;
-}
-.toolbar-check {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--text-dim);
-  cursor: pointer;
-  user-select: none;
-}
-.toolbar-check input { accent-color: var(--accent); }
-.toolbar-spacer { flex: 1; }
-.toolbar-hint { font-size: 12.5px; color: var(--text-dimmer); }
+.menu button:hover, .menu button:focus-visible { background: #343a42; outline: none; }
 
-.empty-state {
-  color: var(--text-dim);
-  padding: 40px 10px;
-  text-align: center;
-  font-size: 14px;
+/* ---------- Einträge ---------- */
+.list-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+.list-head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.list-title { font-size: 16px; font-weight: 700; }
+.list-count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.btn-plus {
+  width: 32px; height: 32px; border: 0; border-radius: 7px;
+  background: var(--accent); color: var(--accent-ink); font-size: 20px; font-weight: 600; line-height: 1;
 }
-.empty-state .btn-link { color: var(--accent); background: none; border: none; cursor: pointer; font: inherit; text-decoration: underline; }
-
-/* ---------- Verzeichnis-Liste ---------- */
-.az-group { margin-bottom: 4px; }
-.az-letter {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dimmer);
-  padding: 10px 4px 4px;
-  letter-spacing: 0.5px;
+.btn-plus:hover { filter: brightness(1.08); }
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 0 3px 0 10px;
+  border-radius: 13px; background: var(--chip-bg); color: var(--chip-fg); font-size: 13px;
 }
-.list { display: flex; flex-direction: column; }
-.row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  text-align: left;
-  background: none;
-  width: 100%;
-  color: var(--text);
+.filter-chip button {
+  width: 20px; height: 20px; border: 0; border-radius: 10px; background: none; color: var(--chip-fg);
+  font-size: 15px; line-height: 1;
 }
-.row:hover { background: var(--surface); border-color: var(--border); }
-.row-marker {
-  flex-shrink: 0;
-  width: 16px;
-  padding-top: 2px;
-  text-align: center;
-  color: var(--diamond);
-  font-size: 12px;
-  line-height: 1;
+.filter-chip button:hover { background: var(--chip-line); }
+.toggle {
+  height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12.5px;
+  border: 1px solid var(--line-2); background: transparent; color: var(--muted);
 }
-.row-body { flex: 1; min-width: 0; }
-.row-top { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
-.row-name { font-weight: 600; }
-.row-art {
-  font-size: 11.5px;
-  color: var(--text-dimmer);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 1px 6px;
+.toggle:hover { color: var(--text); border-color: var(--line-3); }
+.toggle[aria-pressed="true"] { background: var(--chip-bg); border-color: var(--chip-line); color: var(--chip-fg); }
+.toggle[aria-pressed="true"]::before { content: "✓ "; }
+.entries { flex: 1; overflow-y: auto; padding-bottom: 40px; }
+.entry-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--line); }
+.entry-row.dragging { opacity: 0.4; }
+.entry-row.drag-over-top { box-shadow: inset 0 2px 0 var(--accent); }
+.entry-row.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
+.entry {
+  flex: 1; min-width: 0; display: flex; gap: 8px; align-items: flex-start;
+  padding: 10px 14px; border: 0; background: none; text-align: left; color: var(--text);
 }
-.row-meta {
-  font-size: 12.5px;
-  color: var(--text-dim);
-  margin-top: 2px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
+.entry:hover { background: #20242a; }
+.entry[aria-current="true"] { background: var(--row-sel); box-shadow: inset 3px 0 0 var(--accent); }
+.entry-marker { width: 12px; flex-shrink: 0; color: var(--diamond); font-size: 11px; padding-top: 3px; }
+.entry-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.entry-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.entry-name { font-weight: 600; font-size: 14.5px; }
+.entry-tag { font-size: 11.5px; color: var(--muted); }
+.entry-why, .entry-meta { font-size: 13px; color: var(--muted); }
+.entry-why {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.row-themes { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.row-notiz {
-  font-size: 12.5px;
-  color: var(--text-dim);
-  margin-top: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.row-notiz-full { display: block; }
-.theme-tag {
-  font-size: 11px;
-  color: var(--text-dim);
-  background: var(--surface-2);
-  border-radius: 5px;
-  padding: 1px 6px;
-}
-.row-counts {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--text-dimmer);
-  text-align: right;
-  padding-top: 2px;
-  white-space: nowrap;
+.entry-meta { font-variant-numeric: tabular-nums; }
+.entry-controls { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding-right: 8px; }
+.entry-controls .icon-btn { width: 26px; height: 24px; }
+.az-letter { font-size: 12px; font-weight: 700; color: var(--muted); padding: 12px 14px 4px; letter-spacing: 0.05em; border-bottom: 1px solid var(--line); }
+.section-label { font-size: 12px; font-weight: 700; color: var(--muted); padding: 14px 14px 4px; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.today-line { height: 0; border-top: 2px solid var(--accent); margin: 0; }
+.empty-state { color: var(--muted); padding: 40px 16px; text-align: center; }
+.btn-link { color: var(--accent); background: none; border: 0; font: inherit; text-decoration: underline; }
+.inline-input {
+  background: var(--bg); border: 1px solid var(--line-3); border-radius: 6px;
+  padding: 3px 8px; color: var(--text);
 }
 
-/* ---------- Agenda ---------- */
-.agenda-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 18px 0 8px;
-  color: var(--text-dimmer);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+/* ---------- Kartei ---------- */
+.kartei-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.kartei-empty { color: var(--muted); padding: 40px 20px; text-align: center; }
+.kartei-head { display: flex; gap: 8px; align-items: flex-start; padding: 6px 18px 12px 20px; }
+.kartei-head-main { flex: 1; min-width: 0; }
+.kartei-eyebrow { font-size: 12px; color: var(--muted); }
+.kartei-title { font-size: 22px; font-weight: 700; line-height: 1.25; margin-top: 2px; word-break: break-word; }
+.kartei-title:focus { outline: none; }
+.kartei-title:focus-visible { outline: 2px solid var(--focus); }
+.kartei-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.text-badge { font-size: 12px; border-radius: 5px; padding: 1px 7px; border: 1px solid var(--diamond); color: var(--diamond); }
+.kartei-body { padding: 4px 20px 20px; }
+.kartei-foot { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line-2); flex-wrap: wrap; flex-shrink: 0; }
+.kartei-back { width: 28px; height: 28px; margin-top: 2px; }
+.kn-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.kn-chip {
+  display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 0 3px 0 10px;
+  border-radius: 13px; background: var(--chip-bg); color: var(--chip-fg); font-size: 13px;
 }
-.agenda-divider::before, .agenda-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
+.kn-chip button {
+  width: 20px; height: 20px; border: 0; border-radius: 10px; background: none; color: var(--chip-fg); line-height: 1; font-size: 15px;
 }
-.agenda-divider.today { color: var(--accent); }
-.agenda-divider.today::before, .agenda-divider.today::after { background: var(--accent-dim); }
-.agenda-section-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dimmer);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 4px 8px;
+.kn-chip button:hover { background: var(--chip-line); }
+.kn-add {
+  height: 26px; padding: 0 10px; border-radius: 13px; font-size: 13px;
+  border: 1px dashed var(--line-3); background: none; color: var(--muted);
 }
-.event-row .row-top { gap: 8px; }
-.event-date {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-dim);
-  font-size: 12.5px;
-}
-.badge-own {
-  font-size: 11px;
-  color: var(--diamond);
-  border: 1px solid var(--diamond);
-  border-radius: 5px;
-  padding: 0 5px;
-}
+.kn-add:hover { color: var(--text); border-color: var(--muted); }
+.kn-add-inline { display: inline-flex; gap: 6px; align-items: center; }
+.kn-add-inline input { height: 28px; width: 190px; }
 
-/* ---------- Ideen-Liste ---------- */
-.idee-row { cursor: pointer; }
-.idee-row.dragging { opacity: 0.4; }
-.idee-row.drag-over-top { box-shadow: inset 0 2px 0 var(--accent); }
-.idee-row.drag-over-bottom { box-shadow: inset 0 -2px 0 var(--accent); }
-.drag-handle { cursor: grab; color: var(--text-dimmer); }
-.row-controls { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-.row-controls .icon-btn { width: 24px; height: 24px; }
-
-.ordner-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px 4px;
+.field-group { margin-bottom: 16px; }
+.field-label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 4px; }
+.field-value { font-size: 14px; white-space: pre-wrap; }
+.field-value.empty { color: var(--muted); }
+.ref-list { display: flex; flex-direction: column; gap: 4px; }
+.ref-item {
+  white-space: normal;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
+  padding: 7px 10px; text-align: left; color: var(--text); width: 100%; font-size: 13.5px;
 }
-.ordner-header .ordner-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dimmer);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-.ordner-header .ordner-count { font-size: 11px; color: var(--text-dimmer); }
-.ordner-header .ordner-actions { margin-left: auto; display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-.ordner-header .ordner-actions .btn-danger { padding: 3px 10px; font-size: 11.5px; }
-.ordner-header .ordner-actions .warn-box { flex-basis: 100%; margin: 4px 0 0; }
-.ordner-header.drag-over { background: var(--surface); border-radius: 8px; outline: 1px dashed var(--accent); }
-.ordner-rename-input {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 2px 6px;
-  font: inherit;
-  color: inherit;
-}
-.ordner-add-inline { display: inline-flex; gap: 6px; }
-.ordner-add-inline input {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 6px 10px;
-  color: var(--text);
-  font-size: 13.5px;
-}
+.ref-item:hover { border-color: var(--line-3); }
+.ref-item .ref-sub { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
 
 /* ---------- Dialoge ---------- */
 dialog {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0;
-  width: min(560px, calc(100vw - 32px));
-  max-height: min(84vh, 820px);
-  overflow: hidden;
-  flex-direction: column;
+  background: var(--raised); color: var(--text);
+  border: 1px solid var(--line-3); border-radius: 12px; padding: 0;
+  width: min(580px, calc(100vw - 32px)); max-height: min(88vh, 860px);
+  overflow: hidden; flex-direction: column;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
+  margin: auto;
 }
 dialog[open] { display: flex; }
-dialog::backdrop { background: rgba(0,0,0,0.6); }
-.dialog-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 16px 18px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
+.dialog-head { display: flex; align-items: flex-start; gap: 10px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line-2); flex-shrink: 0; }
 .dialog-head-main { flex: 1; min-width: 0; }
-.dialog-eyebrow { font-size: 11.5px; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: 0.5px; }
-.dialog-title { font-size: 18px; font-weight: 700; margin-top: 2px; word-break: break-word; }
-.dialog-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.text-badge {
-  font-size: 11.5px;
-  border-radius: 5px;
-  padding: 2px 7px;
-  border: 1px solid var(--diamond);
-  color: var(--diamond);
-}
-.dialog-back {
-  background: none; border: none; color: var(--text-dim);
-  cursor: pointer; width: 28px; height: 28px; border-radius: 7px;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.dialog-back:hover { background: var(--surface-2); }
-.dialog-back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; }
-.dialog-close {
-  background: none; border: none; color: var(--text-dim);
-  cursor: pointer; width: 28px; height: 28px; border-radius: 7px;
-  font-size: 18px; line-height: 1; flex-shrink: 0;
-}
-.dialog-close:hover { background: var(--surface-2); color: var(--text); }
-.dialog-body { padding: 14px 18px 18px; overflow-y: auto; flex: 1; }
-.dialog-foot {
-  display: flex;
-  gap: 8px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
+.dialog-eyebrow { font-size: 12.5px; color: var(--muted); }
+.dialog-title { font-size: 20px; font-weight: 700; margin-top: 2px; word-break: break-word; }
+.dialog-close { width: 32px; height: 32px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 20px; line-height: 1; flex-shrink: 0; }
+.dialog-close:hover { background: var(--sel); color: var(--text); }
+.dialog-body { padding: 16px 20px 18px; overflow-y: auto; flex: 1; }
+.dialog-foot { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line-2); flex-shrink: 0; flex-wrap: wrap; background: var(--kartei); }
+.kartei-foot.dialog-foot { background: transparent; }
 
-.field-group { margin-bottom: 14px; }
-.field-label {
-  font-size: 11.5px;
-  color: var(--text-dimmer);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 3px;
+/* Knotenpunkt-Dialog */
+#knotenDialog { width: min(640px, calc(100vw - 32px)); }
+.kd-usage { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.kd-sec { display: flex; flex-direction: column; gap: 8px; padding: 16px 0; border-top: 1px solid var(--line-2); }
+.kd-sec:first-child { border-top: 0; padding-top: 0; }
+.kd-sec h3 { font-size: 13px; font-weight: 700; letter-spacing: 0.03em; color: var(--text-2); }
+.kd-sec p { color: var(--muted); font-size: 13px; }
+.kd-sec input[type="text"] {
+  height: 36px; background: var(--bg); border: 1px solid var(--line-3); border-radius: 6px;
+  padding: 0 10px; color: var(--text); width: 100%;
 }
-.field-value { font-size: 14.5px; white-space: pre-wrap; }
-.field-value a { color: var(--accent); }
-.field-value.empty { color: var(--text-dimmer); font-style: italic; }
-.ref-list { display: flex; flex-direction: column; gap: 4px; }
-.ref-item {
-  background: var(--surface-2);
-  border-radius: 7px;
-  padding: 7px 10px;
-  cursor: pointer;
-  border: none;
-  text-align: left;
-  color: var(--text);
-  width: 100%;
-  font-size: 13.5px;
+.kd-danger { flex-direction: row; align-items: center; gap: 12px; }
+.kd-danger > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.kd-scope { border: 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kd-scope legend { float: left; margin-right: 6px; color: var(--muted); font-size: 13px; }
+.kd-preview { flex: 1; color: var(--muted); font-size: 13px; }
+.toggle-chip {
+  position: relative; display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border: 1px solid var(--line-3); border-radius: 15px;
+  color: var(--muted); cursor: pointer; font-size: 13px;
 }
-.ref-item:hover { background: var(--surface-3); }
-.ref-item .ref-sub { color: var(--text-dim); font-size: 12px; margin-top: 1px; }
+.toggle-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle-chip:hover { color: var(--text); }
+.toggle-chip:has(input:checked) { background: var(--chip-bg); border-color: var(--chip-line); color: var(--chip-fg); }
+.toggle-chip:has(input:checked)::before { content: "✓"; font-size: 12px; }
+.toggle-chip:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* ---------- Formulare ---------- */
 .form-field { margin-bottom: 13px; }
-.form-field label {
-  display: block;
-  font-size: 12.5px;
-  color: var(--text-dim);
-  margin-bottom: 4px;
-}
+.form-field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
 .form-field label .req { color: var(--danger); }
-.form-field input[type="text"],
-.form-field input[type="date"],
-.form-field input[type="url"],
-.form-field input[type="password"],
-.form-field textarea,
-.form-field select {
-  width: 100%;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 8px 10px;
-  color: var(--text);
+.form-field input[type="text"], .form-field input[type="date"], .form-field input[type="url"],
+.form-field input[type="password"], .form-field textarea, .form-field select,
+.theme-add-row input, .ordner-add-row input {
+  width: 100%; background: var(--bg); border: 1px solid var(--line-2); border-radius: 7px;
+  padding: 8px 10px; color: var(--text);
 }
 .form-field textarea { resize: vertical; min-height: 60px; }
-.form-field-hint { font-size: 11px; color: var(--text-dimmer); margin-top: 3px; text-align: right; }
+.form-field-hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; text-align: right; }
 .form-row { display: flex; gap: 10px; }
 .form-row .form-field { flex: 1; }
 .radio-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .radio-row label { display: flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--text); margin-bottom: 0; }
-.radio-row input { accent-color: var(--accent); }
+.radio-row input, .checkbox-field input { accent-color: var(--accent); }
 .checkbox-field { display: flex; align-items: center; gap: 7px; }
-.checkbox-field input { accent-color: var(--accent); }
 .checkbox-field label { margin-bottom: 0 !important; color: var(--text) !important; }
-
+.chip {
+  background: transparent; border: 1px solid var(--line-3); color: var(--muted);
+  border-radius: 13px; padding: 3px 10px; font-size: 12.5px;
+}
+.chip:hover { color: var(--text); }
+.chip[aria-pressed="true"] { background: var(--chip-bg); border-color: var(--chip-line); color: var(--chip-fg); }
 .theme-picker { display: flex; flex-wrap: wrap; gap: 6px; }
-.theme-picker .chip { font-size: 12.5px; padding: 4px 10px; }
 .theme-add-row, .ordner-add-row { display: flex; gap: 6px; margin-top: 8px; }
 .theme-add-row input, .ordner-add-row input { flex: 1; }
-.theme-add-row button, .ordner-add-row button { flex-shrink: 0; }
-
 .sub-rows { display: flex; flex-direction: column; gap: 7px; }
-.sub-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  background: var(--surface-2);
-  border-radius: 8px;
-  padding: 7px;
-}
-.sub-row input { flex: 1; min-width: 0; }
+.sub-row { display: flex; gap: 6px; align-items: center; background: var(--kartei); border-radius: 8px; padding: 7px; }
+.sub-row input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 8px; color: var(--text); }
 .sub-row input[list] { flex: 1.4; }
-.sub-row-remove {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  width: 26px; height: 26px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-}
-.sub-row-remove:hover { background: var(--surface-3); color: var(--danger); }
-.sub-row-add {
-  align-self: flex-start;
-  background: none;
-  border: 1px dashed var(--border);
-  color: var(--text-dim);
-  border-radius: 7px;
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  margin-top: 2px;
-}
-.sub-row-add:hover { border-color: var(--text-dim); color: var(--text); }
+.sub-row-remove { flex-shrink: 0; background: none; border: 0; color: var(--muted); width: 26px; height: 26px; border-radius: 6px; font-size: 16px; }
+.sub-row-remove:hover { background: var(--sel); color: var(--danger); }
+.sub-row-add { align-self: flex-start; background: none; border: 1px dashed var(--line-3); color: var(--muted); border-radius: 7px; padding: 6px 12px; font-size: 13px; margin-top: 2px; }
+.sub-row-add:hover { color: var(--text); }
 
 /* ---------- Buttons ---------- */
 .btn {
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
+  border: 1px solid var(--line-3); background: transparent; color: var(--text);
+  border-radius: 7px; padding: 7px 14px; font-size: 13.5px; font-weight: 600;
 }
-.btn:hover { border-color: var(--text-dim); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #0a0a0a; }
-.btn-primary:hover { filter: brightness(1.08); }
-.btn-danger { color: var(--danger); border-color: var(--danger); background: none; }
-.btn-danger:hover { background: rgba(239,68,68,0.1); }
-.btn-danger.confirming { background: var(--danger); color: #fff; }
-.btn-ghost { background: none; border-color: transparent; color: var(--text-dim); }
-.btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-danger { color: var(--danger); border-color: var(--danger-line); background: none; }
+.btn-danger:hover { background: rgba(255,155,138,0.08); }
+.btn-danger.confirming { background: #a8473b; border-color: #a8473b; color: #fff; }
+.btn-ghost { border-color: transparent; color: var(--muted); }
+.btn-ghost:hover { background: var(--sel); color: var(--text); }
 .btn-spacer { flex: 1; }
-
 .warn-box {
-  background: rgba(245,158,11,0.1);
-  border: 1px solid var(--warn);
-  color: var(--warn);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 13px;
-  margin-bottom: 12px;
+  background: rgba(245,184,74,0.08); border: 1px solid #8a6a2c; color: var(--warn);
+  border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; flex-basis: 100%;
 }
 .warn-box ul { margin: 6px 0 0 18px; }
 
-/* ---------- Picker (Neu) ---------- */
-.picker-options { display: flex; flex-direction: column; gap: 8px; }
-.picker-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-  text-align: left;
-  color: var(--text);
-}
-.picker-option:hover { border-color: var(--accent); }
-.picker-option svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; flex-shrink: 0; }
-.picker-option-title { font-weight: 600; font-size: 14.5px; }
-.picker-option-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 1px; }
-
-/* ---------- Settings ---------- */
-.settings-section { margin-bottom: 20px; }
-.settings-section h3 { font-size: 13.5px; margin-bottom: 8px; }
-.settings-hint { font-size: 12px; color: var(--text-dimmer); margin-bottom: 10px; line-height: 1.5; }
-.settings-hint a { color: var(--accent); }
+/* ---------- Einstellungen ---------- */
+.settings-section { margin-bottom: 22px; }
+.settings-section h3 { font-size: 14px; margin-bottom: 8px; }
+.settings-hint { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
 .settings-status { font-size: 12.5px; margin-top: 8px; min-height: 18px; }
 .settings-status.ok { color: #4ade80; }
 .settings-status.err { color: var(--danger); }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-@media (max-width: 560px) {
-  .header-title { display: none; }
-  .header-row { gap: 6px; flex-wrap: nowrap; }
-  .search-wrap { flex-basis: 60px; }
-  .btn-new { padding: 7px 10px; }
+/* ---------- Schmale Bildschirme ---------- */
+@media (max-width: 860px) {
+  .topbar { gap: 10px; flex-wrap: wrap; }
+  .search { width: auto; flex: 1 1 160px; order: 3; }
+  .kbd-hint { display: none; }
+  .resizer, .collapse-btn { display: none !important; }
+  .only-narrow { display: inline-flex !important; }
+  .col.collapsed { width: auto !important; }
+  .col.collapsed .col-content { display: flex; }
+  .col.collapsed .col-rail { display: none; }
+  #colKnoten, #colKartei { display: none; }
+  body.knoten-open #colKnoten,
+  body.kartei-open #colKartei {
+    display: flex; position: fixed; inset: 0; z-index: 40; width: auto !important;
+    padding-top: env(safe-area-inset-top);
+  }
+  #colListe { min-width: 0; }
   dialog { width: 100vw; max-height: 100vh; height: 100%; border-radius: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sync-dot.syncing { animation: none; }
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="header-row">
-    <span class="header-title">Feld</span>
-    <form class="search-wrap" id="searchForm" role="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <label for="searchInput" class="sr-only">Suche über Verzeichnis, Agenda und Ideen</label>
-      <input type="search" id="searchInput" placeholder="Suche …" autocomplete="off">
-      <button type="button" class="search-clear" id="searchClear" aria-label="Suche löschen">×</button>
-    </form>
-    <button class="btn-new" id="btnNew">+ Neu</button>
-    <button class="icon-btn" id="btnSync" title="Sync nicht eingerichtet · auf ⚙ tippen" aria-label="Sync-Status">
-      <span class="sync-dot off" id="syncDot"></span>
-    </button>
-    <button class="icon-btn" id="btnSettings" aria-label="Einstellungen">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
-    </button>
-  </div>
-  <nav role="tablist" aria-label="Ansichten" id="tabs">
-    <button role="tab" id="tab-verzeichnis" aria-controls="view-verzeichnis" aria-selected="true" data-view="verzeichnis">Verzeichnis <span class="count" id="count-verzeichnis"></span></button>
-    <button role="tab" id="tab-agenda" aria-controls="view-agenda" aria-selected="false" tabindex="-1" data-view="agenda">Agenda <span class="count" id="count-agenda"></span></button>
-    <button role="tab" id="tab-ideen" aria-controls="view-ideen" aria-selected="false" tabindex="-1" data-view="ideen">Ideen <span class="count" id="count-ideen"></span></button>
+<header class="topbar">
+  <span class="brand">Feld</span>
+  <nav role="tablist" aria-label="Bereiche" class="areas" id="tabs">
+    <button role="tab" id="tab-verzeichnis" aria-controls="colListe" aria-selected="true" data-view="verzeichnis">Akteure</button>
+    <button role="tab" id="tab-agenda" aria-controls="colListe" aria-selected="false" tabindex="-1" data-view="agenda">Projekte</button>
+    <button role="tab" id="tab-ideen" aria-controls="colListe" aria-selected="false" tabindex="-1" data-view="ideen">Ideen</button>
   </nav>
+  <span class="topbar-spacer"></span>
+  <form class="search" id="searchForm" role="search">
+    <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <label for="searchInput" class="sr-only">Suchen im aktuellen Bereich</label>
+    <input type="search" id="searchInput" placeholder="Suchen" autocomplete="off" aria-keyshortcuts="Meta+F Control+F">
+    <kbd class="kbd-hint" id="kbdHint" aria-hidden="true">⌘F</kbd>
+    <button type="button" class="search-clear" id="searchClear" aria-label="Suche löschen">×</button>
+  </form>
+  <button class="icon-btn" id="btnSync" title="Sync nicht eingerichtet" aria-label="Sync-Status">
+    <span class="sync-dot off" id="syncDot"></span>
+  </button>
+  <button class="icon-btn" id="btnSettings" aria-label="Einstellungen">
+    <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
+  </button>
 </header>
 
 <div id="liveRegion" class="sr-only" aria-live="polite" role="status"></div>
 
-<main id="main">
+<div class="columns" id="columns">
 
-  <section class="view" id="view-verzeichnis" role="tabpanel" aria-labelledby="tab-verzeichnis" tabindex="0">
-    <div class="toolbar">
-      <div class="chip-group" id="artFilter" role="group" aria-label="Filter nach Art">
-        <button class="chip" data-art="Person" aria-pressed="false">Person</button>
-        <button class="chip" data-art="Initiative" aria-pressed="false">Initiative</button>
-        <button class="chip" data-art="Institution" aria-pressed="false">Institution</button>
-      </div>
-      <select class="filter-select" id="themaFilter" aria-label="Filter nach Thema">
-        <option value="">Alle Themen</option>
-      </select>
-      <label class="toolbar-check">
-        <input type="checkbox" id="zusammenarbeitFilter">
-        nur zusammengearbeitet
-      </label>
-      <div class="toolbar-spacer"></div>
-    </div>
-    <div class="list" id="verzeichnisList"></div>
-  </section>
-
-  <section class="view" id="view-agenda" role="tabpanel" aria-labelledby="tab-agenda" tabindex="0" hidden>
-    <div class="toolbar">
-      <div class="chip-group" id="eigeneFilter" role="group" aria-label="Eigene oder Dritte">
-        <button class="chip" data-eigene="alle" aria-pressed="true">Alle</button>
-        <button class="chip" data-eigene="eigene" aria-pressed="false">Eigene</button>
-        <button class="chip" data-eigene="dritte" aria-pressed="false">Dritte</button>
-      </div>
-      <div class="chip-group" id="zeitFilter" role="group" aria-label="Zeitraum">
-        <button class="chip" data-zeit="alle" aria-pressed="true">Alle</button>
-        <button class="chip" data-zeit="anstehend" aria-pressed="false">Anstehend</button>
-        <button class="chip" data-zeit="vergangen" aria-pressed="false">Vergangen</button>
-      </div>
-    </div>
-    <div class="list" id="agendaList"></div>
-  </section>
-
-  <section class="view" id="view-ideen" role="tabpanel" aria-labelledby="tab-ideen" tabindex="0" hidden>
-    <div class="toolbar">
-      <div class="chip-group" id="ideenSortFilter" role="group" aria-label="Sortierung">
-        <button class="chip" data-sort="neu" aria-pressed="true">Neu</button>
-        <button class="chip" data-sort="alt" aria-pressed="false">Alt</button>
-        <button class="chip" data-sort="az" aria-pressed="false">A-Z</button>
-        <button class="chip" data-sort="manuell" aria-pressed="false">Manuell</button>
-      </div>
-      <div class="toolbar-spacer"></div>
-      <div id="ordnerAddToolbar">
-        <button class="btn btn-ghost" type="button" id="btnNeuerOrdner">+ Ordner</button>
-        <span class="ordner-add-inline" id="ordnerAddInline" hidden>
-          <input type="text" id="ordnerAddInlineInput" placeholder="Name des Ordners …">
-          <button class="btn btn-primary" type="button" id="ordnerAddInlineConfirm">Erstellen</button>
-        </span>
-      </div>
-    </div>
-    <div class="list" id="ideenList"></div>
-  </section>
-
-</main>
-
-<!-- Detail-Dialog -->
-<dialog id="detailDialog">
-  <div class="dialog-head">
-    <button class="dialog-back" id="detailBack" aria-label="Zurück" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+  <aside class="col" id="colKnoten" aria-labelledby="knotenTitle">
+    <button type="button" class="col-rail" id="knotenRail" aria-expanded="false" aria-controls="knotenContent">
+      <svg class="icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      <span class="col-rail-label">Knotenpunkte<span class="sr-only"> ausklappen</span></span>
     </button>
-    <div class="dialog-head-main">
-      <div class="dialog-eyebrow" id="detailEyebrow"></div>
-      <div class="dialog-title" id="detailTitle"></div>
-      <div class="dialog-badges" id="detailBadges"></div>
+    <div class="col-content" id="knotenContent">
+      <div class="col-head">
+        <h2 class="col-title" id="knotenTitle">Knotenpunkte</h2>
+        <span class="grow"></span>
+        <label for="knotenSort" class="sr-only">Knotenpunkte sortieren</label>
+        <select id="knotenSort" class="mini-select">
+          <option value="az">A–Z</option>
+          <option value="haeufigkeit">Häufigkeit</option>
+        </select>
+        <button type="button" class="icon-btn collapse-btn" id="knotenCollapse" aria-expanded="true" aria-controls="knotenContent" aria-label="Knotenpunkte einklappen">
+          <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button type="button" class="icon-btn only-narrow" id="knotenCloseNarrow" aria-label="Knotenpunkte schliessen">×</button>
+      </div>
+      <ul class="kn-list" id="knotenList" aria-describedby="knotenHint"></ul>
+      <div class="kn-hint" id="knotenHint">⇧ zur Mehrfachauswahl</div>
     </div>
-    <button class="dialog-close" id="detailClose" aria-label="Schliessen">×</button>
-  </div>
-  <div class="dialog-body" id="detailBody"></div>
-  <div class="dialog-foot" id="detailFoot"></div>
+  </aside>
+
+  <div class="resizer" id="resizeKnoten" role="separator" aria-orientation="vertical" aria-label="Breite der Knotenpunkte" aria-controls="colKnoten" tabindex="0"></div>
+
+  <main class="col" id="colListe" role="tabpanel" aria-labelledby="listTitle">
+    <div class="list-head">
+      <div class="list-head-row">
+        <button type="button" class="btn btn-ghost only-narrow" id="knotenOpenNarrow">Knotenpunkte</button>
+        <h1 class="list-title" id="listTitle">Akteure</h1>
+        <span class="list-count" id="listCount"></span>
+        <span class="grow" style="flex:1"></span>
+        <label for="listSort" class="sr-only">Sortierung</label>
+        <select id="listSort" class="mini-select"></select>
+        <button type="button" class="btn-plus" id="btnPlus" aria-label="Neuer Akteur">+</button>
+      </div>
+      <div class="list-head-row" id="filterRow"></div>
+    </div>
+    <div class="entries" id="entryList"></div>
+  </main>
+
+  <div class="resizer" id="resizeKartei" role="separator" aria-orientation="vertical" aria-label="Breite der Kartei" aria-controls="colKartei" tabindex="0"></div>
+
+  <aside class="col" id="colKartei" aria-label="Kartei">
+    <button type="button" class="col-rail" id="karteiRail" aria-expanded="false" aria-controls="karteiContent">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span class="col-rail-label">Kartei<span class="sr-only"> ausklappen</span></span>
+    </button>
+    <div class="col-content" id="karteiContent">
+      <div class="col-head">
+        <span class="col-title">Kartei</span>
+        <span class="grow"></span>
+        <button type="button" class="icon-btn collapse-btn" id="karteiCollapse" aria-expanded="true" aria-controls="karteiContent" aria-label="Kartei einklappen">
+          <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <button type="button" class="icon-btn only-narrow" id="karteiCloseNarrow" aria-label="Kartei schliessen">×</button>
+      </div>
+      <div class="kartei-scroll" id="karteiInner"></div>
+    </div>
+  </aside>
+</div>
+
+<datalist id="knotenNamesList"></datalist>
+
+<!-- Knotenpunkt bearbeiten -->
+<dialog id="knotenDialog" aria-labelledby="kdTitle">
+  <form id="kdForm" style="display:contents">
+    <div class="dialog-head">
+      <div class="dialog-head-main">
+        <div class="dialog-eyebrow">Knotenpunkt bearbeiten</div>
+        <h2 class="dialog-title" id="kdTitle"></h2>
+        <div class="kd-usage" id="kdUsage"></div>
+      </div>
+      <button type="button" class="dialog-close" id="kdClose" aria-label="Schliessen">×</button>
+    </div>
+    <div class="dialog-body">
+      <section class="kd-sec" aria-labelledby="kdH1">
+        <h3 id="kdH1">1 · Umbenennen</h3>
+        <label for="kdName" class="sr-only">Neuer Name</label>
+        <input type="text" id="kdName" autocomplete="off" aria-describedby="kdNameHint">
+        <p id="kdNameHint">Gilt überall, wo der Knotenpunkt vorkommt. Heisst der neue Name wie ein bestehender Knotenpunkt, werden beide zusammengeführt.</p>
+      </section>
+      <section class="kd-sec" aria-labelledby="kdH2">
+        <h3 id="kdH2">2 · Weiteren Knotenpunkt zuweisen</h3>
+        <p id="kdAddDesc"></p>
+        <label for="kdAdd" class="sr-only">Knotenpunkt, der zusätzlich zugewiesen wird</label>
+        <input type="text" id="kdAdd" list="knotenNamesList" autocomplete="off" placeholder="Knotenpunkt wählen oder neu eingeben" aria-describedby="kdAddDesc">
+        <fieldset class="kd-scope">
+          <legend>Bei</legend>
+          <label class="toggle-chip"><input type="checkbox" name="kdScope" value="akteure"><span>Akteure · <span data-n="akteure"></span></span></label>
+          <label class="toggle-chip"><input type="checkbox" name="kdScope" value="veranstaltungen"><span>Projekte · <span data-n="veranstaltungen"></span></span></label>
+          <label class="toggle-chip"><input type="checkbox" name="kdScope" value="ideen"><span>Ideen · <span data-n="ideen"></span></span></label>
+        </fieldset>
+      </section>
+      <section class="kd-sec" aria-labelledby="kdH3">
+        <h3 id="kdH3">3 · Zusammenführen</h3>
+        <p id="kdMergeDesc"></p>
+        <label for="kdMerge" class="sr-only">Ziel-Knotenpunkt</label>
+        <input type="text" id="kdMerge" list="knotenNamesList" autocomplete="off" placeholder="Ziel-Knotenpunkt wählen" aria-describedby="kdMergeDesc">
+      </section>
+      <section class="kd-sec kd-danger" aria-labelledby="kdH4">
+        <div>
+          <h3 id="kdH4">4 · Löschen</h3>
+          <p id="kdDelDesc"></p>
+        </div>
+        <button type="button" class="btn btn-danger" id="kdDelete">Knotenpunkt löschen …</button>
+      </section>
+    </div>
+    <div class="dialog-foot">
+      <span class="kd-preview" id="kdPreview" aria-live="polite"></span>
+      <button type="button" class="btn btn-ghost" id="kdCancel">Abbrechen</button>
+      <button type="submit" class="btn btn-primary" id="kdApply">Anwenden</button>
+    </div>
+  </form>
 </dialog>
 
 <!-- Formular-Dialog -->
-<dialog id="formDialog">
+<dialog id="formDialog" aria-labelledby="formTitle">
   <div class="dialog-head">
     <div class="dialog-head-main">
       <div class="dialog-eyebrow" id="formEyebrow"></div>
-      <div class="dialog-title" id="formTitle"></div>
+      <h2 class="dialog-title" id="formTitle"></h2>
     </div>
     <button class="dialog-close" id="formClose" aria-label="Schliessen">×</button>
   </div>
@@ -762,36 +597,10 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   <div class="dialog-foot" id="formFoot"></div>
 </dialog>
 
-<!-- Neu-Auswahl-Dialog -->
-<dialog id="pickerDialog">
-  <div class="dialog-head">
-    <div class="dialog-head-main">
-      <div class="dialog-title">Neu anlegen</div>
-    </div>
-    <button class="dialog-close" id="pickerClose" aria-label="Schliessen">×</button>
-  </div>
-  <div class="dialog-body">
-    <div class="picker-options">
-      <button class="picker-option" data-type="akteur">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-        <span><span class="picker-option-title">Akteur</span><br><span class="picker-option-desc">Person, Initiative oder Institution</span></span>
-      </button>
-      <button class="picker-option" data-type="veranstaltung">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
-        <span><span class="picker-option-title">Veranstaltung</span><br><span class="picker-option-desc">Eigene oder Veranstaltung Dritter</span></span>
-      </button>
-      <button class="picker-option" data-type="idee">
-        <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a6 6 0 00-3.5 10.9c.6.44.9 1.1.9 1.85V15h5.2v-.25c0-.75.3-1.4.9-1.85A6 6 0 0012 2z"/></svg>
-        <span><span class="picker-option-title">Idee</span><br><span class="picker-option-desc">Von einem Satz bis zu einem Konzept</span></span>
-      </button>
-    </div>
-  </div>
-</dialog>
-
 <!-- Einstellungen-Dialog -->
-<dialog id="settingsDialog">
+<dialog id="settingsDialog" aria-labelledby="settingsTitle">
   <div class="dialog-head">
-    <div class="dialog-head-main"><div class="dialog-title">Einstellungen</div></div>
+    <div class="dialog-head-main"><h2 class="dialog-title" id="settingsTitle">Einstellungen</h2></div>
     <button class="dialog-close" id="settingsClose" aria-label="Schliessen">×</button>
   </div>
   <div class="dialog-body">
@@ -827,11 +636,12 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
     </div>
 
     <div class="settings-section">
-      <h3>Themenvokabular</h3>
-      <p class="settings-hint">Kontrolliertes Vokabular, erweiterbar. Neue Themen können auch direkt beim Bearbeiten eines Akteurs hinzugefügt werden.</p>
+      <h3>Knotenpunkte</h3>
+      <p class="settings-hint">Knotenpunkte werden in der Kartei vergeben. Umbenennen, zuweisen, zusammenführen und löschen: in der Spalte Knotenpunkte einen auswählen, dann ⋯ → Bearbeiten. Hier lassen sich Knotenpunkte auf Vorrat anlegen.</p>
       <div class="theme-picker" id="themaVocabList"></div>
       <div class="theme-add-row">
-        <input type="text" id="themaVocabInput" placeholder="Neues Thema …">
+        <label for="themaVocabInput" class="sr-only">Neuer Knotenpunkt</label>
+        <input type="text" id="themaVocabInput" placeholder="Neuer Knotenpunkt …">
         <button class="btn" id="themaVocabAdd" type="button">Hinzufügen</button>
       </div>
     </div>
@@ -844,7 +654,7 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
         <button class="btn" id="btnImport" type="button">JSON importieren …</button>
         <button class="btn" id="btnTemplate" type="button">Vorlage herunterladen</button>
       </div>
-      <input type="file" id="importFile" accept="application/json" class="sr-only">
+      <input type="file" id="importFile" accept="application/json" class="sr-only" tabindex="-1" aria-hidden="true">
       <div class="settings-status" id="importStatus"></div>
     </div>
 
@@ -876,10 +686,17 @@ let remoteSha = null;
 let syncInFlight = false;
 let currentView = 'verzeichnis';
 let searchQuery = '';
-let dialogStack = []; // für Rückverweis-Navigation im Detail-Dialog: {type,id}
 
-// Verzeichnis-Filterzustand
-let filterArt = new Set();
+// Spaltenzustand
+const SORT_KEY = 'feld_list_sort_v1';
+const KNOTEN_SORT_KEY = 'feld_knoten_sort_v1';
+let selectedKnoten = new Set();          // ausgewählte Knotenpunkte (UND-verknüpft)
+let knotenSort = 'az';                   // az | haeufigkeit
+let listSort = { verzeichnis: 'az', agenda: 'chrono', ideen: 'neu' };
+let selected = { verzeichnis: null, agenda: null, ideen: null };   // Eintrag in der Kartei, pro Bereich
+
+// Akteure-Filterzustand
+let filterArt = '';
 let filterThema = '';
 let filterZusammenarbeit = false;
 
@@ -888,7 +705,6 @@ let filterEigene = 'alle';   // alle | eigene | dritte
 let filterZeit = 'alle';     // alle | anstehend | vergangen
 
 // Ideen-Sortierung & Drag&Drop
-let ideenSort = 'neu';       // neu | alt | az | manuell
 let dragIdeeId = null;
 
 /* =========================================================================
@@ -1049,6 +865,7 @@ function istZusammengearbeitet(akteurId) {
 
 function veranstaltungStatus(v) {
   const massgebend = v.bis || v.datum;
+  if (!massgebend) return 'ohne';   // Projekte ohne Datum sind erlaubt
   return massgebend >= todayISO() ? 'anstehend' : 'vergangen';
 }
 
@@ -1063,7 +880,7 @@ function akteurBackrefs(id) {
     const b = (v.beteiligte || []).find(x => x.id === id);
     if (b) veranstaltungen.push({ item: v, rolle: b.rolle || '' });
   });
-  veranstaltungen.sort((a, b) => (b.item.bis || b.item.datum).localeCompare(a.item.bis || a.item.datum));
+  veranstaltungen.sort((a, b) => (b.item.bis || b.item.datum || '').localeCompare(a.item.bis || a.item.datum || ''));
 
   const ideen = [];
   Store.list('ideen').forEach(i => {
@@ -1091,7 +908,7 @@ function referencingFor(type, id) {
   if (type === 'akteure') {
     const b = akteurBackrefs(id);
     const out = [];
-    b.veranstaltungen.forEach(x => out.push(`Veranstaltung „${x.item.titel}"`));
+    b.veranstaltungen.forEach(x => out.push(`Projekt „${x.item.titel}"`));
     b.ideen.forEach(x => out.push(`Idee „${x.item.titel}"`));
     b.zugehoerige.forEach(x => out.push(`Akteur „${x.name}" (gehört zu)`));
     return out;
@@ -1169,13 +986,12 @@ function haystackFor(type, item) {
   }
   if (type === 'veranstaltungen') {
     const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
-    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, ...beteiligteNamen];
+    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...beteiligteNamen];
   }
   if (type === 'ideen') {
     const namen = (item.akteure || []).map(a => akteurName(a.id));
     const warums = (item.akteure || []).map(a => a.warum);
-    const ordnerName = item.ordner ? (DATA.ideenOrdner[item.ordner] || {}).name : '';
-    return [item.titel, item.text, ...namen, ...warums, ordnerName];
+    return [item.titel, item.text, (item.themen || []).join(' '), ...namen, ...warums];
   }
   return [];
 }
@@ -1189,321 +1005,599 @@ function searchFilter(type, items) {
   });
 }
 
-/* =========================================================================
-   Rendering: Tabs / Zähler
-   ========================================================================= */
-const TAB_TYPE = { verzeichnis: 'akteure', agenda: 'veranstaltungen', ideen: 'ideen' };
-const TAB_NOUN = { verzeichnis: ['Akteur', 'Akteure'], agenda: ['Veranstaltung', 'Veranstaltungen'], ideen: ['Idee', 'Ideen'] };
 
-function renderTabCounts() {
-  const hasQuery = getSearchWords().length > 0;
-  Object.entries(TAB_TYPE).forEach(([tab, type]) => {
-    const total = Store.list(type).length;
-    const el = $('count-' + tab);
-    if (!hasQuery) { el.textContent = `(${total})`; return; }
-    const hits = searchFilter(type, Store.list(type)).length;
-    el.textContent = `(${hits}/${total})`;
+/* =========================================================================
+   Bereiche (Akteure · Projekte · Ideen)
+   Interne Schlüssel bleiben verzeichnis/agenda/ideen (gespeicherter Reiter),
+   die Collection für Projekte heisst weiterhin «veranstaltungen».
+   ========================================================================= */
+const AREAS = ['verzeichnis', 'agenda', 'ideen'];
+const TAB_TYPE = { verzeichnis: 'akteure', agenda: 'veranstaltungen', ideen: 'ideen' };
+const TYPE_AREA = { akteure: 'verzeichnis', veranstaltungen: 'agenda', ideen: 'ideen' };
+const AREA_LABEL = { verzeichnis: 'Akteure', agenda: 'Projekte', ideen: 'Ideen' };
+const TAB_NOUN = { verzeichnis: ['Akteur', 'Akteure'], agenda: ['Projekt', 'Projekte'], ideen: ['Idee', 'Ideen'] };
+const TYPE_LABEL = { akteure: 'Akteur', veranstaltungen: 'Projekt', ideen: 'Idee' };
+const NEU_LABEL = { akteure: 'Neuer Akteur', veranstaltungen: 'Neues Projekt', ideen: 'Neue Idee' };
+const SORT_OPTIONS = {
+  verzeichnis: [['az', 'A–Z'], ['geaendert', 'Zuletzt geändert']],
+  agenda: [['chrono', 'Chronologisch'], ['az', 'A–Z'], ['geaendert', 'Zuletzt geändert']],
+  ideen: [['neu', 'Neueste zuerst'], ['alt', 'Älteste zuerst'], ['az', 'A–Z'], ['manuell', 'Manuell']],
+};
+
+function pluralize(n, [sing, plur]) { return n === 1 ? sing : plur; }
+function titleOf(type, item) { return type === 'akteure' ? item.name : item.titel; }
+function cmpDe(a, b) { return String(a || '').localeCompare(String(b || ''), 'de'); }
+
+/* =========================================================================
+   Knotenpunkte (nicht-hierarchische Schlagworte, geteilt über alle Bereiche)
+   ========================================================================= */
+const ALL_TYPES = ['akteure', 'veranstaltungen', 'ideen'];
+
+function themenOf(item) { return Array.isArray(item && item.themen) ? item.themen : []; }
+
+// Vokabular enthält immer alle tatsächlich verwendeten Knotenpunkte.
+function ensureVokabular() {
+  const set = new Set(DATA.themenVokabular);
+  ALL_TYPES.forEach(t => Store.list(t).forEach(it => themenOf(it).forEach(k => set.add(k))));
+  DATA.themenVokabular = Array.from(set).sort(cmpDe);
+}
+
+function knotenUsage(k) {
+  const out = {};
+  ALL_TYPES.forEach(t => { out[t] = Store.list(t).filter(it => themenOf(it).includes(k)).length; });
+  out.total = out.akteure + out.veranstaltungen + out.ideen;
+  return out;
+}
+
+function findKnoten(name) {
+  const n = normalize(name);
+  return DATA.themenVokabular.find(k => normalize(k) === n) || null;
+}
+
+// Setzt die Knotenpunkte eines Eintrags direkt (ohne Formular).
+function setThemen(type, id, themen) {
+  const o = DATA[type][id];
+  if (!o || o.deleted) return;
+  o.themen = Array.from(new Set(themen));
+  o.modified = nowISO();
+}
+
+function ensureKnotenDatalist() {
+  $('knotenNamesList').innerHTML = DATA.themenVokabular.map(k => `<option value="${escapeHtml(k)}">`).join('');
+}
+
+// Ideen-Ordner (Vorversion) werden zu Knotenpunkten: der Ordnername wird
+// den Ideen als Knotenpunkt zugewiesen, der Ordner per Tombstone gelöscht
+// (setzt sich so auch über den Sync auf anderen Geräten durch).
+function migrateOrdnerZuKnoten() {
+  const ordner = Store.list('ideenOrdner');
+  if (!ordner.length && !Store.list('ideen').some(i => i.ordner)) return false;
+  ordner.forEach(o => {
+    const name = findKnoten(o.name) || o.name;
+    Store.list('ideen').filter(i => i.ordner === o.id).forEach(i => {
+      const th = themenOf(i);
+      setThemen('ideen', i.id, th.includes(name) ? th : [...th, name]);
+    });
+    if (!DATA.themenVokabular.includes(name)) DATA.themenVokabular.push(name);
+    DATA.ideenOrdner[o.id] = { deleted: true, modified: nowISO() };
+  });
+  Object.values(DATA.ideen).forEach(i => { if (!i.deleted && i.ordner) { delete i.ordner; i.modified = nowISO(); } });
+  saveLocal();
+  return true;
+}
+
+/* =========================================================================
+   Filter & Sortierung
+   ========================================================================= */
+function applyAreaFilters(area, items) {
+  if (area === 'verzeichnis') {
+    if (filterArt) items = items.filter(a => a.art === filterArt);
+    if (filterZusammenarbeit) items = items.filter(a => istZusammengearbeitet(a.id));
+  }
+  if (area === 'agenda') {
+    if (filterEigene === 'eigene') items = items.filter(v => v.eigene);
+    if (filterEigene === 'dritte') items = items.filter(v => !v.eigene);
+  }
+  return items;
+}
+
+function baseItems(area) {
+  const type = TAB_TYPE[area];
+  return applyAreaFilters(area, searchFilter(type, Store.list(type)));
+}
+
+function filteredItems(area) {
+  let items = baseItems(area);
+  if (selectedKnoten.size) {
+    const sel = Array.from(selectedKnoten);
+    items = items.filter(it => sel.every(k => themenOf(it).includes(k)));   // UND-verknüpft
+  }
+  return items;
+}
+
+function hasActiveFilter() {
+  return getSearchWords().length || selectedKnoten.size || filterArt || filterZusammenarbeit || filterEigene !== 'alle';
+}
+
+function announceCount() {
+  const n = filteredItems(currentView).length;
+  announce(`${n} ${pluralize(n, TAB_NOUN[currentView])}`);
+}
+
+/* =========================================================================
+   Spalte Knotenpunkte
+   ========================================================================= */
+let openMenuState = null; // {el, btn}
+
+function renderKnoten(focusName) {
+  const base = baseItems(currentView);
+  const counts = new Map();
+  base.forEach(it => themenOf(it).forEach(k => counts.set(k, (counts.get(k) || 0) + 1)));
+  selectedKnoten.forEach(k => { if (!counts.has(k)) counts.set(k, 0); });
+
+  const list = Array.from(counts.entries());
+  if (knotenSort === 'haeufigkeit') list.sort((a, b) => b[1] - a[1] || cmpDe(a[0], b[0]));
+  else list.sort((a, b) => cmpDe(a[0], b[0]));
+
+  const ul = $('knotenList');
+  ul.innerHTML = '';
+
+  const alle = document.createElement('li');
+  alle.className = 'kn-row' + (selectedKnoten.size ? '' : ' is-sel');
+  alle.innerHTML = `<button type="button" class="kn-btn" data-alle aria-pressed="${!selectedKnoten.size}">
+      <span class="kn-name">Alle</span><span class="kn-count"><span class="sr-only">, </span>${base.length}</span></button>`;
+  alle.querySelector('button').addEventListener('click', () => { selectedKnoten.clear(); afterKnotenChange(); });
+  ul.appendChild(alle);
+
+  if (!list.length) {
+    const li = document.createElement('li');
+    li.className = 'kn-empty';
+    li.textContent = 'Noch keine Knotenpunkte in diesem Bereich. Vergeben werden sie in der Kartei.';
+    ul.appendChild(li);
+  }
+
+  list.forEach(([k, n]) => {
+    const sel = selectedKnoten.has(k);
+    const li = document.createElement('li');
+    li.className = 'kn-row' + (sel ? ' is-sel' : '');
+    li.innerHTML = `
+      <button type="button" class="kn-btn" aria-pressed="${sel}">
+        <span class="kn-name">${escapeHtml(k)}</span>
+        ${sel ? '<span class="kn-check" aria-hidden="true">✓</span>' : ''}
+        <span class="kn-count"><span class="sr-only">, </span>${n}<span class="sr-only"> ${pluralize(n, TAB_NOUN[currentView])}</span></span>
+      </button>
+      ${sel ? `<button type="button" class="kn-more" aria-haspopup="menu" aria-expanded="false" aria-label="Optionen für ${escapeHtml(k)}">⋯</button>` : ''}`;
+    const btn = li.querySelector('.kn-btn');
+    btn.dataset.knoten = k;
+    btn.addEventListener('click', e => {
+      if (e.shiftKey) {
+        if (sel) selectedKnoten.delete(k); else selectedKnoten.add(k);
+      } else if (sel && selectedKnoten.size === 1) {
+        selectedKnoten.clear();
+      } else {
+        selectedKnoten = new Set([k]);
+      }
+      afterKnotenChange(k);
+    });
+    const more = li.querySelector('.kn-more');
+    if (more) {
+      more.dataset.knoten = k;
+      more.addEventListener('click', () => toggleKnotenMenu(more, k));
+    }
+    ul.appendChild(li);
+  });
+
+  if (focusName !== undefined) {
+    const target = focusName === null
+      ? ul.querySelector('[data-alle]')
+      : Array.from(ul.querySelectorAll('.kn-btn')).find(b => b.dataset.knoten === focusName);
+    (target || ul.querySelector('.kn-btn')).focus();
+  }
+}
+
+function afterKnotenChange(focusName) {
+  renderKnoten(focusName === undefined ? null : focusName);
+  renderListe();
+  renderKartei();
+  announceCount();
+}
+
+/* ⋯-Menü */
+function closeKnotenMenu(returnFocus) {
+  if (!openMenuState) return;
+  const { el, btn } = openMenuState;
+  el.remove();
+  btn.setAttribute('aria-expanded', 'false');
+  document.removeEventListener('mousedown', onMenuOutside, true);
+  openMenuState = null;
+  if (returnFocus && document.body.contains(btn)) btn.focus();
+}
+
+function onMenuOutside(e) {
+  if (openMenuState && !openMenuState.el.contains(e.target) && e.target !== openMenuState.btn) closeKnotenMenu(false);
+}
+
+function toggleKnotenMenu(btn, k) {
+  if (openMenuState && openMenuState.btn === btn) { closeKnotenMenu(true); return; }
+  closeKnotenMenu(false);
+  const menu = document.createElement('div');
+  menu.className = 'menu';
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', k);
+  const items = [
+    ['Bearbeiten …', () => openKnotenDialog(k)],
+    ['Nur diesen auswählen', () => { selectedKnoten = new Set([k]); afterKnotenChange(k); }],
+  ];
+  items.forEach(([label, fn]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'menuitem');
+    b.tabIndex = -1;
+    b.textContent = label;
+    b.addEventListener('click', () => { closeKnotenMenu(false); fn(); });
+    menu.appendChild(b);
+  });
+  menu.addEventListener('keydown', e => {
+    const its = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    const i = its.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); its[(i + 1) % its.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); its[(i - 1 + its.length) % its.length].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); its[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); its[its.length - 1].focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeKnotenMenu(true); }
+    else if (e.key === 'Tab') { closeKnotenMenu(false); }
+  });
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  const left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8);
+  let top = r.bottom + 4;
+  if (top + menu.offsetHeight > window.innerHeight - 8) top = r.top - menu.offsetHeight - 4;
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.top = Math.max(8, top) + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  openMenuState = { el: menu, btn };
+  document.addEventListener('mousedown', onMenuOutside, true);
+  menu.querySelector('[role="menuitem"]').focus();
+}
+
+/* =========================================================================
+   Dialog «Knotenpunkt bearbeiten»
+   ========================================================================= */
+let kdKnoten = null;
+let kdDeleteArmed = false;
+
+function openKnotenDialog(k) {
+  kdKnoten = k;
+  kdDeleteArmed = false;
+  const u = knotenUsage(k);
+  $('kdTitle').textContent = k;
+  $('kdUsage').textContent = `verwendet bei ${u.akteure} ${pluralize(u.akteure, ['Akteur', 'Akteuren'])} · ${u.veranstaltungen} ${pluralize(u.veranstaltungen, ['Projekt', 'Projekten'])} · ${u.ideen} ${pluralize(u.ideen, ['Idee', 'Ideen'])}`;
+  $('kdName').value = k;
+  $('kdAdd').value = '';
+  $('kdMerge').value = '';
+  $('kdAddDesc').textContent = `Alle Einträge mit «${k}» erhalten zusätzlich:`;
+  $('kdMergeDesc').textContent = `«${k}» in einen anderen Knotenpunkt überführen. Danach gibt es ihn nicht mehr.`;
+  $('kdDelDesc').textContent = `Von allen ${u.total} ${pluralize(u.total, ['Eintrag', 'Einträgen'])} entfernen. Die Einträge selbst bleiben.`;
+  document.querySelectorAll('input[name="kdScope"]').forEach(cb => {
+    cb.checked = cb.value === TAB_TYPE[currentView];
+    document.querySelector(`[data-n="${cb.value}"]`).textContent = u[cb.value];
+  });
+  resetKdDelete();
+  ensureKnotenDatalist();
+  updateKdPreview();
+  $('knotenDialog').showModal();
+  $('kdName').focus();
+  $('kdName').select();
+}
+
+function kdPlan() {
+  const old = kdKnoten;
+  const newNameRaw = $('kdName').value.trim();
+  const addRaw = $('kdAdd').value.trim();
+  const mergeRaw = $('kdMerge').value.trim();
+  const scopes = Array.from(document.querySelectorAll('input[name="kdScope"]:checked')).map(cb => cb.value);
+  const add = addRaw ? (findKnoten(addRaw) || addRaw) : '';
+  const merge = mergeRaw ? (findKnoten(mergeRaw) || mergeRaw) : '';
+  // Zusammenführen hat Vorrang vor Umbenennen; ein Umbenennen auf einen
+  // bestehenden Namen ist faktisch ebenfalls ein Zusammenführen.
+  let target = '';
+  if (merge && merge !== old) target = merge;
+  else if (newNameRaw && newNameRaw !== old) target = findKnoten(newNameRaw) && findKnoten(newNameRaw) !== old ? findKnoten(newNameRaw) : newNameRaw;
+  const addActive = !!add && add !== old && scopes.length > 0;
+  return { old, target, add, addActive, scopes };
+}
+
+function updateKdPreview() {
+  const p = kdPlan();
+  const u = knotenUsage(p.old);
+  const parts = [];
+  if (p.target) {
+    const isMerge = !!findKnoten(p.target) && p.target !== p.old;
+    parts.push(`${isMerge ? 'Zusammenführen mit' : 'Umbenennen in'} «${p.target}»: ${u.total} ${pluralize(u.total, ['Eintrag', 'Einträge'])}`);
+  }
+  if (p.addActive) {
+    const n = p.scopes.reduce((s, t) => s + Store.list(t).filter(it => themenOf(it).includes(p.old) && !themenOf(it).includes(p.add)).length, 0);
+    parts.push(`«${p.add}» zuweisen: ${n} ${pluralize(n, ['Eintrag', 'Einträge'])}`);
+  }
+  $('kdPreview').textContent = parts.length ? parts.join(' · ') : 'Noch keine Änderung.';
+  $('kdApply').disabled = !parts.length;
+}
+
+function applyKnotenEdit() {
+  const p = kdPlan();
+  if (!p.target && !p.addActive) return;
+  if (p.addActive) {
+    p.scopes.forEach(type => Store.list(type).forEach(it => {
+      const th = themenOf(it);
+      if (th.includes(p.old) && !th.includes(p.add)) setThemen(type, it.id, [...th, p.add]);
+    }));
+    if (!DATA.themenVokabular.includes(p.add)) DATA.themenVokabular.push(p.add);
+  }
+  if (p.target) {
+    ALL_TYPES.forEach(type => Store.list(type).forEach(it => {
+      const th = themenOf(it);
+      if (th.includes(p.old)) setThemen(type, it.id, th.map(t => t === p.old ? p.target : t));
+    }));
+    DATA.themenVokabular = DATA.themenVokabular.filter(t => t !== p.old);
+    if (!DATA.themenVokabular.includes(p.target)) DATA.themenVokabular.push(p.target);
+    if (selectedKnoten.has(p.old)) { selectedKnoten.delete(p.old); selectedKnoten.add(p.target); }
+  }
+  saveLocal();
+  const focusName = p.target || p.old;
+  closeKnotenDialog(focusName);
+  announce('Knotenpunkt geändert');
+}
+
+function resetKdDelete() {
+  kdDeleteArmed = false;
+  $('kdDelete').textContent = 'Knotenpunkt löschen …';
+  $('kdDelete').classList.remove('confirming');
+}
+
+function deleteKnoten() {
+  const k = kdKnoten;
+  if (!kdDeleteArmed) {
+    kdDeleteArmed = true;
+    const n = knotenUsage(k).total;
+    $('kdDelete').textContent = `Wirklich löschen (${n})?`;
+    $('kdDelete').classList.add('confirming');
+    return;
+  }
+  ALL_TYPES.forEach(type => Store.list(type).forEach(it => {
+    const th = themenOf(it);
+    if (th.includes(k)) setThemen(type, it.id, th.filter(t => t !== k));
+  }));
+  DATA.themenVokabular = DATA.themenVokabular.filter(t => t !== k);
+  selectedKnoten.delete(k);
+  saveLocal();
+  closeKnotenDialog(null);
+  announce(`Knotenpunkt «${k}» gelöscht`);
+}
+
+function closeKnotenDialog(focusName) {
+  if ($('knotenDialog').open) $('knotenDialog').close();
+  ensureVokabular();
+  renderAll();
+  // Fokus zurück in die Knotenpunkt-Spalte (das ⋯-Menü existiert nicht mehr)
+  const name = focusName === undefined ? kdKnoten : focusName;
+  renderKnoten(name && selectedKnoten.has(name) ? name : (name && Array.from(document.querySelectorAll('#knotenList .kn-btn')).some(b => b.dataset.knoten === name) ? name : null));
+  kdKnoten = null;
+}
+
+/* =========================================================================
+   Spalte Einträge
+   ========================================================================= */
+function renderListHead() {
+  const area = currentView;
+  const type = TAB_TYPE[area];
+  $('listTitle').textContent = AREA_LABEL[area];
+  $('btnPlus').setAttribute('aria-label', NEU_LABEL[type]);
+  $('btnPlus').title = NEU_LABEL[type];
+
+  const sortSel = $('listSort');
+  sortSel.innerHTML = SORT_OPTIONS[area].map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  sortSel.value = listSort[area];
+
+  // Bereichsspezifische Filter (bleiben bewusst klein)
+  const row = $('filterRow');
+  row.innerHTML = '<span id="activeKnoten" style="display:contents"></span>';
+  if (area === 'verzeichnis') {
+    row.insertAdjacentHTML('beforeend', `
+      <label for="artFilter" class="sr-only">Art</label>
+      <select id="artFilter" class="mini-select">
+        <option value="">Alle Arten</option><option>Person</option><option>Initiative</option><option>Institution</option>
+      </select>
+      <button type="button" class="toggle" id="zusammenFilter" aria-pressed="${filterZusammenarbeit}">zusammengearbeitet</button>`);
+    $('artFilter').value = filterArt;
+    $('artFilter').addEventListener('change', () => { filterArt = $('artFilter').value; renderKnoten(); renderListe(); announceCount(); });
+    $('zusammenFilter').addEventListener('click', () => {
+      filterZusammenarbeit = !filterZusammenarbeit;
+      $('zusammenFilter').setAttribute('aria-pressed', String(filterZusammenarbeit));
+      renderKnoten(); renderListe(); announceCount();
+    });
+  } else if (area === 'agenda') {
+    row.insertAdjacentHTML('beforeend', `
+      <label for="eigeneFilter" class="sr-only">Eigene oder Dritte</label>
+      <select id="eigeneFilter" class="mini-select">
+        <option value="alle">Eigene und Dritte</option><option value="eigene">Nur eigene</option><option value="dritte">Nur Dritte</option>
+      </select>`);
+    $('eigeneFilter').value = filterEigene;
+    $('eigeneFilter').addEventListener('change', () => { filterEigene = $('eigeneFilter').value; renderKnoten(); renderListe(); announceCount(); });
+  }
+}
+
+function renderActiveKnoten() {
+  const host = $('activeKnoten');
+  if (!host) return;
+  host.innerHTML = '';
+  selectedKnoten.forEach(k => {
+    const chip = document.createElement('span');
+    chip.className = 'filter-chip';
+    chip.innerHTML = `${escapeHtml(k)}<button type="button" aria-label="Filter ${escapeHtml(k)} entfernen">×</button>`;
+    chip.querySelector('button').addEventListener('click', () => {
+      selectedKnoten.delete(k);
+      afterKnotenChange();
+      const next = $('activeKnoten').querySelector('button');
+      (next || $('listSort')).focus();
+    });
+    host.appendChild(chip);
   });
 }
 
-function pluralize(n, [sing, plur]) { return n === 1 ? sing : plur; }
+function renderListe() {
+  const area = currentView;
+  const type = TAB_TYPE[area];
+  const total = Store.list(type).length;
+  const items = filteredItems(area);
+  $('listCount').textContent = items.length === total ? `${total}` : `${items.length} von ${total}`;
+  renderActiveKnoten();
 
-/* =========================================================================
-   Rendering: Verzeichnis
-   ========================================================================= */
-function renderVerzeichnis() {
-  let items = searchFilter('akteure', Store.list('akteure'));
-  if (filterArt.size) items = items.filter(a => filterArt.has(a.art));
-  if (filterThema) items = items.filter(a => (a.themen || []).includes(filterThema));
-  if (filterZusammenarbeit) items = items.filter(a => istZusammengearbeitet(a.id));
-  items.sort((a, b) => a.name.localeCompare(b.name, 'de'));
-
-  const root = $('verzeichnisList');
+  const root = $('entryList');
+  const scrollTop = root.scrollTop;
   root.innerHTML = '';
 
   if (!items.length) {
-    root.innerHTML = `<div class="empty-state">${getSearchWords().length || filterArt.size || filterThema || filterZusammenarbeit
-      ? 'Keine Treffer mit diesen Filtern.' : 'Noch keine Akteure. <button class="btn-link" id="emptyNewAkteur">Ersten Akteur anlegen</button>'}</div>`;
-    const btn = $('emptyNewAkteur');
-    if (btn) btn.addEventListener('click', () => openForm('akteure', null));
-    announce('0 Akteure');
+    root.innerHTML = `<div class="empty-state">${hasActiveFilter()
+      ? 'Keine Treffer mit diesen Filtern.'
+      : `Noch keine ${AREA_LABEL[area]}. <button class="btn-link" id="emptyNew">${NEU_LABEL[type]} anlegen</button>`}</div>`;
+    const b = $('emptyNew');
+    if (b) b.addEventListener('click', () => openForm(type, null));
     return;
   }
 
-  let lastLetter = '';
-  items.forEach(a => {
-    const letter = normalize(a.name).charAt(0).toUpperCase();
-    if (letter !== lastLetter) {
-      lastLetter = letter;
-      const h = document.createElement('div');
-      h.className = 'az-letter';
-      h.textContent = letter;
-      root.appendChild(h);
+  const sort = listSort[area];
+  const add = el => root.appendChild(el);
+
+  if (area === 'verzeichnis') {
+    if (sort === 'geaendert') {
+      items.sort((a, b) => (b.modified || '').localeCompare(a.modified || '') || cmpDe(a.name, b.name));
+      items.forEach(a => add(entryRow('akteure', a)));
+    } else {
+      items.sort((a, b) => cmpDe(a.name, b.name));
+      let last = '';
+      items.forEach(a => {
+        const letter = normalize(a.name).charAt(0).toUpperCase();
+        if (letter !== last) {
+          last = letter;
+          const h = document.createElement('div');
+          h.className = 'az-letter';
+          h.setAttribute('aria-hidden', 'true');
+          h.textContent = letter;
+          add(h);
+        }
+        add(entryRow('akteure', a));
+      });
     }
-    root.appendChild(renderAkteurRow(a));
-  });
-
-  announce(`${items.length} ${pluralize(items.length, TAB_NOUN.verzeichnis)}`);
+  } else if (area === 'agenda') {
+    if (sort === 'chrono') {
+      const key = v => v.bis || v.datum || '';
+      // durchgehend absteigend: Fernes oben, die Linie markiert «jetzt»
+      const anstehend = items.filter(v => veranstaltungStatus(v) === 'anstehend').sort((a, b) => key(b).localeCompare(key(a)));
+      const vergangen = items.filter(v => veranstaltungStatus(v) === 'vergangen').sort((a, b) => key(b).localeCompare(key(a)));
+      const ohne = items.filter(v => veranstaltungStatus(v) === 'ohne').sort((a, b) => cmpDe(a.titel, b.titel));
+      anstehend.forEach(v => add(entryRow('veranstaltungen', v)));
+      if (anstehend.length && vergangen.length) {
+        const line = document.createElement('div');
+        line.className = 'today-line';
+        line.setAttribute('role', 'separator');
+        line.innerHTML = '<span class="sr-only">heute</span>';
+        add(line);
+      }
+      vergangen.forEach(v => add(entryRow('veranstaltungen', v)));
+      if (ohne.length) {
+        const lbl = document.createElement('div');
+        lbl.className = 'section-label';
+        lbl.textContent = 'Ohne Datum';
+        add(lbl);
+        ohne.forEach(v => add(entryRow('veranstaltungen', v)));
+      }
+    } else if (sort === 'geaendert') {
+      items.sort((a, b) => (b.modified || '').localeCompare(a.modified || '') || cmpDe(a.titel, b.titel));
+      items.forEach(v => add(entryRow('veranstaltungen', v)));
+    } else {
+      items.sort((a, b) => cmpDe(a.titel, b.titel));
+      items.forEach(v => add(entryRow('veranstaltungen', v)));
+    }
+  } else {
+    items.sort((a, b) => compareIdeen(a, b, sort));
+    items.forEach(i => add(entryRow('ideen', i)));
+  }
+  root.scrollTop = scrollTop;
 }
 
-function renderAkteurRow(a) {
-  const backrefs = akteurBackrefs(a.id);
-  const zusammen = istZusammengearbeitet(a.id);
-  const zuName = a.zu ? akteurName(a.zu) : null;
-
-  const row = document.createElement('button');
-  row.className = 'row';
-  row.type = 'button';
-  row.innerHTML = `
-    <span class="row-marker">${zusammen ? '◆' : ''}<span class="sr-only">${zusammen ? 'zusammengearbeitet' : ''}</span></span>
-    <span class="row-body">
-      <span class="row-top">
-        <span class="row-name">${escapeHtml(a.name)}</span>
-        <span class="row-art">${escapeHtml(a.art)}</span>
-      </span>
-      <span class="row-meta">
-        ${zuName ? `<span>→ ${escapeHtml(zuName)}</span>` : ''}
-        ${a.ort ? `<span>${escapeHtml(a.ort)}</span>` : ''}
-      </span>
-      ${(a.themen || []).length ? `<span class="row-themes">${a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join('')}</span>` : ''}
-      ${a.kurznotiz ? `<span class="row-notiz row-notiz-full">${escapeHtml(a.kurznotiz)}</span>`
-        : a.notiz ? `<span class="row-notiz">${escapeHtml(a.notiz)}</span>` : ''}
-    </span>
-    <span class="row-counts">${backrefs.veranstaltungen.length} Veranst.<br>${backrefs.ideen.length} Ideen</span>
-  `;
-  row.addEventListener('click', () => openDetail('akteure', a.id));
-  return row;
-}
-
-/* =========================================================================
-   Rendering: Agenda
-   ========================================================================= */
 function wichtigsteBeteiligte(v) {
   return (v.beteiligte || [])
     .filter(b => !EIGENE_IDS.includes(b.id) && b.rolle !== 'Förderung')
-    .map(b => {
-      const name = akteurName(b.id);
-      if (!name) return null;
-      return b.rolle ? `${name} (${b.rolle})` : name;
-    })
+    .map(b => akteurName(b.id))
     .filter(Boolean)
     .join(', ');
 }
 
-function renderAgenda() {
-  let items = searchFilter('veranstaltungen', Store.list('veranstaltungen'));
-  if (filterEigene === 'eigene') items = items.filter(v => v.eigene);
-  if (filterEigene === 'dritte') items = items.filter(v => !v.eigene);
+function entryRow(type, item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'entry-row';
+  wrap.dataset.id = item.id;
+  const isSel = selected[TYPE_AREA[type]] === item.id;
+  let marker = '', markerSr = '', tag = '', lines = '';
 
-  const withStatus = items.map(v => ({ v, status: veranstaltungStatus(v) }));
-  let anstehend = withStatus.filter(x => x.status === 'anstehend').sort((a, b) => (a.v.bis || a.v.datum).localeCompare(b.v.bis || b.v.datum));
-  let vergangen = withStatus.filter(x => x.status === 'vergangen').sort((a, b) => (b.v.bis || b.v.datum).localeCompare(a.v.bis || a.v.datum));
-
-  if (filterZeit === 'anstehend') vergangen = [];
-  if (filterZeit === 'vergangen') anstehend = [];
-
-  const root = $('agendaList');
-  root.innerHTML = '';
-  const total = anstehend.length + vergangen.length;
-
-  if (!total) {
-    root.innerHTML = `<div class="empty-state">${getSearchWords().length ? 'Keine Treffer mit diesen Filtern.' : 'Noch keine Veranstaltungen. <button class="btn-link" id="emptyNewVeranstaltung">Erste Veranstaltung anlegen</button>'}</div>`;
-    const btn = $('emptyNewVeranstaltung');
-    if (btn) btn.addEventListener('click', () => openForm('veranstaltungen', null));
-    announce('0 Veranstaltungen');
-    return;
+  if (type === 'akteure') {
+    if (istZusammengearbeitet(item.id)) { marker = '◆'; markerSr = 'zusammengearbeitet'; }
+    tag = item.art || '';
+    const why = item.kurznotiz || item.notiz || '';
+    if (why) lines += `<span class="entry-why">${escapeHtml(why)}</span>`;
+  } else if (type === 'veranstaltungen') {
+    if (item.eigene) { marker = '◆'; markerSr = 'eigenes Projekt'; }
+    const meta = [formatDateRange(item.datum, item.bis), item.format, item.ort].filter(Boolean).join(' · ');
+    if (meta) lines += `<span class="entry-meta">${escapeHtml(meta)}</span>`;
+    const bet = wichtigsteBeteiligte(item);
+    if (bet) lines += `<span class="entry-why">${escapeHtml(bet)}</span>`;
+  } else {
+    if (item.text) lines += `<span class="entry-why">${escapeHtml(item.text)}</span>`;
+    lines += `<span class="entry-meta">${escapeHtml(formatDate(item.erstellt))}</span>`;
   }
 
-  if (anstehend.length) {
-    const lbl = document.createElement('div');
-    lbl.className = 'agenda-section-label';
-    lbl.textContent = 'Anstehend';
-    root.appendChild(lbl);
-    anstehend.forEach(x => root.appendChild(renderVeranstaltungRow(x.v, x.status)));
-  }
-  if (filterZeit === 'alle' && anstehend.length && vergangen.length) {
-    const div = document.createElement('div');
-    div.className = 'agenda-divider today';
-    div.textContent = 'Heute';
-    root.appendChild(div);
-  } else if (vergangen.length) {
-    const lbl = document.createElement('div');
-    lbl.className = 'agenda-section-label';
-    lbl.textContent = 'Vergangen';
-    root.appendChild(lbl);
-  }
-  vergangen.forEach(x => root.appendChild(renderVeranstaltungRow(x.v, x.status)));
+  wrap.innerHTML = `
+    <button type="button" class="entry" aria-current="${isSel}">
+      <span class="entry-marker" aria-hidden="true">${marker}</span>
+      <span class="entry-body">
+        <span class="entry-top">
+          <span class="entry-name">${escapeHtml(titleOf(type, item))}</span>
+          ${tag ? `<span class="entry-tag">${escapeHtml(tag)}</span>` : ''}
+          ${markerSr ? `<span class="sr-only">, ${markerSr}</span>` : ''}
+        </span>
+        ${lines}
+      </span>
+    </button>`;
+  const btn = wrap.querySelector('.entry');
+  btn.addEventListener('click', () => selectEntry(type, item.id));
 
-  announce(`${total} ${pluralize(total, TAB_NOUN.agenda)}`);
+  if (type === 'ideen' && listSort.ideen === 'manuell') {
+    const ctr = document.createElement('span');
+    ctr.className = 'entry-controls';
+    ctr.innerHTML = `<button type="button" class="icon-btn move-up" aria-label="${escapeHtml(item.titel)} nach oben">↑</button>
+                     <button type="button" class="icon-btn move-down" aria-label="${escapeHtml(item.titel)} nach unten">↓</button>`;
+    ctr.querySelector('.move-up').addEventListener('click', () => moveIdeeStep(item.id, -1));
+    ctr.querySelector('.move-down').addEventListener('click', () => moveIdeeStep(item.id, 1));
+    wrap.appendChild(ctr);
+  }
+  if (type === 'ideen') wireIdeeDrag(wrap, item);
+  return wrap;
 }
 
-function renderVeranstaltungRow(v, status) {
-  const beteiligte = wichtigsteBeteiligte(v);
-  const row = document.createElement('button');
-  row.className = 'row event-row';
-  row.type = 'button';
-  row.innerHTML = `
-    <span class="row-marker">${v.eigene ? '◆' : ''}<span class="sr-only">${v.eigene ? 'eigene Veranstaltung' : ''}</span></span>
-    <span class="row-body">
-      <span class="row-top">
-        <span class="row-name">${escapeHtml(v.titel)}</span>
-        ${v.format ? `<span class="row-art">${escapeHtml(v.format)}</span>` : ''}
-      </span>
-      <span class="row-meta">
-        <span class="event-date">${escapeHtml(formatDateRange(v.datum, v.bis))}${v.zeit ? ', ' + escapeHtml(v.zeit) : ''}</span>
-        ${v.ort ? `<span>${escapeHtml(v.ort)}</span>` : ''}
-      </span>
-      ${beteiligte ? `<span class="row-meta">${escapeHtml(beteiligte)}</span>` : ''}
-    </span>
-  `;
-  row.addEventListener('click', () => openDetail('veranstaltungen', v.id));
-  return row;
-}
-
-/* =========================================================================
-   Rendering: Ideen
-   ========================================================================= */
+/* Ideen: manuelle Reihenfolge, Drag&Drop */
 function compareIdeen(a, b, sort) {
-  if (sort === 'az') return a.titel.localeCompare(b.titel, 'de');
+  if (sort === 'az') return cmpDe(a.titel, b.titel);
   if (sort === 'alt') return (a.erstellt || '').localeCompare(b.erstellt || '');
   if (sort === 'manuell') {
     const ra = a.reihenfolge ?? Infinity, rb = b.reihenfolge ?? Infinity;
     if (ra !== rb) return ra - rb;
     return (b.erstellt || '').localeCompare(a.erstellt || '');
   }
-  return (b.erstellt || '').localeCompare(a.erstellt || ''); // neu (Standard)
+  return (b.erstellt || '').localeCompare(a.erstellt || '');
 }
 
-function renderIdeen() {
-  let items = searchFilter('ideen', Store.list('ideen'));
-
-  const root = $('ideenList');
-  root.innerHTML = '';
-
-  if (!items.length) {
-    root.innerHTML = `<div class="empty-state">${getSearchWords().length ? 'Keine Treffer.' : 'Noch keine Ideen. <button class="btn-link" id="emptyNewIdee">Erste Idee anlegen</button>'}</div>`;
-    const btn = $('emptyNewIdee');
-    if (btn) btn.addEventListener('click', () => openForm('ideen', null));
-    announce('0 Ideen');
-    return;
-  }
-
-  const ordnerListe = Store.list('ideenOrdner').sort((a, b) => a.name.localeCompare(b.name, 'de'));
-  const groups = ordnerListe.length
-    ? [
-        ...ordnerListe.map(o => ({ id: o.id, name: o.name, items: items.filter(i => i.ordner === o.id) })),
-        { id: '', name: 'Ohne Ordner', items: items.filter(i => !i.ordner || !DATA.ideenOrdner[i.ordner] || DATA.ideenOrdner[i.ordner].deleted) },
-      ]
-    : [{ id: '', name: null, items }];
-
-  groups.forEach(g => {
-    g.items.sort((a, b) => compareIdeen(a, b, ideenSort));
-    if (g.name) root.appendChild(renderOrdnerHeader(g));
-    g.items.forEach(i => root.appendChild(renderIdeeRow(i, g.id)));
-  });
-
-  announce(`${items.length} ${pluralize(items.length, TAB_NOUN.ideen)}`);
-}
-
-function renderOrdnerHeader(g) {
-  const header = document.createElement('div');
-  header.className = 'ordner-header';
-  header.dataset.ordner = g.id;
-  header.innerHTML = `
-    <span class="ordner-name">${escapeHtml(g.name)}</span>
-    <span class="ordner-count">(${g.items.length})</span>
-    <span class="ordner-actions"></span>
-  `;
-  if (g.id) {
-    const actions = header.querySelector('.ordner-actions');
-    const renameBtn = document.createElement('button');
-    renameBtn.type = 'button';
-    renameBtn.className = 'icon-btn';
-    renameBtn.title = 'Ordner umbenennen';
-    renameBtn.setAttribute('aria-label', 'Ordner umbenennen');
-    renameBtn.textContent = '✎';
-    renameBtn.addEventListener('click', () => renameOrdnerInline(header, g.id));
-    actions.appendChild(renameBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'btn btn-danger';
-    delBtn.textContent = 'Löschen';
-    attachDeleteButton(delBtn, 'ideenOrdner', g.id, () => renderIdeen());
-    actions.appendChild(delBtn);
-  }
-  header.addEventListener('dragover', e => {
-    if (!dragIdeeId) return;
-    e.preventDefault();
-    header.classList.add('drag-over');
-  });
-  header.addEventListener('dragleave', () => header.classList.remove('drag-over'));
-  header.addEventListener('drop', e => {
-    if (!dragIdeeId) return;
-    e.preventDefault();
-    header.classList.remove('drag-over');
-    const id = dragIdeeId;
-    dragIdeeId = null;
-    moveIdeeToPosition(id, g.id, null);
-  });
-  return header;
-}
-
-function renameOrdnerInline(headerEl, id) {
-  const o = DATA.ideenOrdner[id];
-  if (!o) return;
-  const nameEl = headerEl.querySelector('.ordner-name');
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'ordner-rename-input';
-  input.value = o.name;
-  nameEl.replaceWith(input);
-  input.focus();
-  input.select();
-  let done = false;
-  function commit() {
-    if (done) return;
-    done = true;
-    const val = input.value.trim();
-    if (val && val !== o.name) Store.put('ideenOrdner', id, { name: val });
-    renderIdeen();
-  }
-  input.addEventListener('blur', commit);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { e.preventDefault(); done = true; renderIdeen(); }
-  });
-}
-
-function renderIdeeRow(i, groupOrdnerId) {
-  const namen = (i.akteure || []).map(a => akteurName(a.id)).filter(Boolean);
-  const row = document.createElement('div');
-  row.className = 'row idee-row';
+function wireIdeeDrag(row, i) {
   row.draggable = true;
-  row.dataset.id = i.id;
-  row.innerHTML = `
-    <span class="row-marker drag-handle" aria-hidden="true">⠿</span>
-    <span class="row-body">
-      <span class="row-top"><span class="row-name">${escapeHtml(i.titel)}</span></span>
-      ${i.text ? `<span class="row-meta row-notiz">${escapeHtml(i.text)}</span>` : ''}
-      ${namen.length ? `<span class="row-meta">${namen.map(escapeHtml).join(', ')}</span>` : ''}
-      <span class="row-meta"><span class="event-date">${formatDate(i.erstellt)}</span></span>
-    </span>
-    ${ideenSort === 'manuell' ? `
-    <span class="row-controls">
-      <button type="button" class="icon-btn move-up" title="Nach oben" aria-label="Nach oben">↑</button>
-      <button type="button" class="icon-btn move-down" title="Nach unten" aria-label="Nach unten">↓</button>
-    </span>` : ''}
-  `;
-  row.addEventListener('click', e => {
-    if (e.target.closest('button')) return;
-    openDetail('ideen', i.id);
-  });
-  const upBtn = row.querySelector('.move-up');
-  const downBtn = row.querySelector('.move-down');
-  if (upBtn) upBtn.addEventListener('click', e => { e.stopPropagation(); moveIdeeStep(i.id, -1); });
-  if (downBtn) downBtn.addEventListener('click', e => { e.stopPropagation(); moveIdeeStep(i.id, 1); });
-
   row.addEventListener('dragstart', e => {
     dragIdeeId = i.id;
     e.dataTransfer.effectAllowed = 'move';
@@ -1517,7 +1611,7 @@ function renderIdeeRow(i, groupOrdnerId) {
     dragIdeeId = null;
   });
   row.addEventListener('dragover', e => {
-    if (ideenSort !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
+    if (listSort.ideen !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
     e.preventDefault();
     const rect = row.getBoundingClientRect();
     const before = (e.clientY - rect.top) < rect.height / 2;
@@ -1526,111 +1620,97 @@ function renderIdeeRow(i, groupOrdnerId) {
   });
   row.addEventListener('dragleave', () => row.classList.remove('drag-over-top', 'drag-over-bottom'));
   row.addEventListener('drop', e => {
-    if (ideenSort !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
+    if (listSort.ideen !== 'manuell' || !dragIdeeId || dragIdeeId === i.id) return;
     e.preventDefault();
     const before = row.classList.contains('drag-over-top');
     row.classList.remove('drag-over-top', 'drag-over-bottom');
     const next = row.nextElementSibling;
-    const beforeId = before ? i.id : (next && next.classList.contains('idee-row') ? next.dataset.id : null);
-    const id = dragIdeeId;
-    dragIdeeId = null;
-    moveIdeeToPosition(id, groupOrdnerId, beforeId);
+    const beforeId = before ? i.id : (next && next.classList.contains('entry-row') ? next.dataset.id : null);
+    const id = dragIdeeId; dragIdeeId = null;
+    moveIdeeToPosition(id, beforeId);
   });
-  return row;
 }
 
-// Fügt `ideeId` in die Ordner-Gruppe `targetOrdnerId` ein (vor `beforeId`, oder am Ende
-// wenn `beforeId` leer ist) und nummeriert die ganze Zielgruppe neu durch (reihenfolge).
-function moveIdeeToPosition(ideeId, targetOrdnerId, beforeId) {
+function moveIdeeToPosition(ideeId, beforeId) {
   const idee = DATA.ideen[ideeId];
   if (!idee || idee.deleted) return;
-  targetOrdnerId = targetOrdnerId || '';
-  const group = Store.list('ideen')
-    .filter(i => i.id !== ideeId && (i.ordner || '') === targetOrdnerId)
-    .sort((a, b) => compareIdeen(a, b, 'manuell'));
+  const group = Store.list('ideen').filter(i => i.id !== ideeId).sort((a, b) => compareIdeen(a, b, 'manuell'));
   let insertAt = group.length;
-  if (beforeId) {
-    const idx = group.findIndex(i => i.id === beforeId);
-    if (idx > -1) insertAt = idx;
-  }
+  if (beforeId) { const idx = group.findIndex(i => i.id === beforeId); if (idx > -1) insertAt = idx; }
   group.splice(insertAt, 0, { id: ideeId });
   group.forEach((it, idx) => {
-    const step = (idx + 1) * 10;
     const target = DATA.ideen[it.id];
-    if (!target) return;
-    if (target.reihenfolge !== step) target.reihenfolge = step;
+    if (!target || target.reihenfolge === (idx + 1) * 10) return;
+    target.reihenfolge = (idx + 1) * 10;
     target.modified = nowISO();
   });
-  idee.ordner = targetOrdnerId;
   saveLocal();
-  renderIdeen();
+  renderListe();
 }
 
 function moveIdeeStep(ideeId, direction) {
   const idee = DATA.ideen[ideeId];
   if (!idee) return;
-  const ordnerId = idee.ordner || '';
-  const group = Store.list('ideen')
-    .filter(i => (i.ordner || '') === ordnerId)
-    .sort((a, b) => compareIdeen(a, b, 'manuell'));
+  const group = Store.list('ideen').sort((a, b) => compareIdeen(a, b, 'manuell'));
   const idx = group.findIndex(i => i.id === ideeId);
   const swapIdx = idx + direction;
   if (idx === -1 || swapIdx < 0 || swapIdx >= group.length) return;
   [group[idx], group[swapIdx]] = [group[swapIdx], group[idx]];
   group.forEach((it, i) => {
-    const step = (i + 1) * 10;
     const target = DATA.ideen[it.id];
-    if (target.reihenfolge !== step) { target.reihenfolge = step; target.modified = nowISO(); }
+    if (target.reihenfolge !== (i + 1) * 10) { target.reihenfolge = (i + 1) * 10; target.modified = nowISO(); }
   });
   saveLocal();
-  renderIdeen();
+  renderListe();
+  const row = Array.from(document.querySelectorAll('#entryList .entry-row')).find(r => r.dataset.id === ideeId);
+  if (row) row.querySelector(direction < 0 ? '.move-up' : '.move-down').focus();
 }
 
 /* =========================================================================
-   View-Umschaltung
+   Kartei (rechte Spalte, ersetzt den früheren Detail-Dialog)
    ========================================================================= */
-function renderCurrentView() {
-  if (currentView === 'verzeichnis') renderVerzeichnis();
-  else if (currentView === 'agenda') renderAgenda();
-  else if (currentView === 'ideen') renderIdeen();
+let karteiHistory = []; // {type,id} für «Zurück» nach Verweis-Navigation
+
+function currentSelection() {
+  const id = selected[currentView];
+  const type = TAB_TYPE[currentView];
+  return id && Store.get(type, id) ? { type, id } : null;
 }
 
-function renderAll() {
-  renderTabCounts();
-  renderCurrentView();
-  populateThemaFilter();
+function selectEntry(type, id, opts = {}) {
+  const area = TYPE_AREA[type];
+  const prev = currentSelection();
+  if (opts.fromRef && prev) karteiHistory.push(prev);
+  else if (!opts.viaBack) karteiHistory = [];
+  selected[area] = id;
+  if (area !== currentView) switchView(area);
+  else { markSelectedRow(); renderKartei(); }
+  if (window.matchMedia('(max-width: 860px)').matches) document.body.classList.add('kartei-open');
+  if (opts.fromRef || opts.focusKartei) {
+    const t = $('karteiTitle');
+    if (t) t.focus();
+  }
+  const row = Array.from(document.querySelectorAll('#entryList .entry-row')).find(r => r.dataset.id === id);
+  if (row) row.scrollIntoView({ block: 'nearest' });
 }
 
-function switchView(view, { focus = false } = {}) {
-  currentView = view;
-  localStorage.setItem(TAB_KEY, view);
-  ['verzeichnis', 'agenda', 'ideen'].forEach(v => {
-    const tab = $('tab-' + v);
-    const panel = $('view-' + v);
-    const active = v === view;
-    tab.setAttribute('aria-selected', String(active));
-    tab.tabIndex = active ? 0 : -1;
-    panel.hidden = !active;
+function markSelectedRow() {
+  const id = selected[currentView];
+  document.querySelectorAll('#entryList .entry-row').forEach(r => {
+    r.querySelector('.entry').setAttribute('aria-current', String(r.dataset.id === id));
   });
-  renderCurrentView();
-  if (focus) $('tab-' + view).focus();
 }
 
-function populateThemaFilter() {
-  const sel = $('themaFilter');
-  const current = sel.value;
-  const themen = DATA.themenVokabular;
-  sel.innerHTML = '<option value="">Alle Themen</option>' +
-    themen.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-  sel.value = themen.includes(current) ? current : '';
+// Kompatibilität mit dem bestehenden Formular-Code
+function openDetail(type, id) { selectEntry(type, id); }
+function refreshDetailIfShowing() { renderKartei(); }
+function closeDetail() {
+  selected[currentView] = null;
+  karteiHistory = [];
+  document.body.classList.remove('kartei-open');
+  markSelectedRow();
+  renderKartei();
 }
-
-/* =========================================================================
-   Detail-Dialog (native <dialog>, Rückverweise navigieren innerhalb)
-   ========================================================================= */
-let currentDetail = null; // {type, id}
-
-const TYPE_LABEL = { akteure: 'Akteur', veranstaltungen: 'Veranstaltung', ideen: 'Idee' };
 
 function fieldGroup(label, html, empty) {
   return `<div class="field-group">
@@ -1640,7 +1720,7 @@ function fieldGroup(label, html, empty) {
 }
 
 function refButton(type, id, label, sub) {
-  return `<button type="button" class="ref-item" data-ref-type="${type}" data-ref-id="${id}">
+  return `<button type="button" class="ref-item" data-ref-type="${type}" data-ref-id="${escapeHtml(id)}">
     ${escapeHtml(label)}${sub ? `<div class="ref-sub">${escapeHtml(sub)}</div>` : ''}
   </button>`;
 }
@@ -1651,156 +1731,183 @@ function webLink(web) {
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(web)}</a>`;
 }
 
-function openDetail(type, id, opts = {}) {
-  const item = Store.get(type, id);
-  if (!item) { closeDetail(); return; }
-
-  if (!opts.viaBack) {
-    if (currentDetail && $('detailDialog').open) dialogStack.push(currentDetail);
-    else dialogStack = [];
-  }
-  currentDetail = { type, id };
-  $('detailBack').hidden = dialogStack.length === 0;
-
-  $('detailEyebrow').textContent = TYPE_LABEL[type];
-  $('detailTitle').textContent = type === 'akteure' ? item.name : item.titel;
-
-  const badges = [];
-  if (type === 'akteure' && istZusammengearbeitet(id)) badges.push('zusammengearbeitet');
-  if (type === 'veranstaltungen' && item.eigene) badges.push('eigene');
-  $('detailBadges').innerHTML = badges.map(b => `<span class="text-badge">${escapeHtml(b)}</span>`).join('');
-
-  $('detailBody').innerHTML = type === 'akteure' ? renderAkteurDetailBody(item)
-    : type === 'veranstaltungen' ? renderVeranstaltungDetailBody(item)
-    : renderIdeeDetailBody(item);
-
-  $('detailBody').querySelectorAll('[data-ref-type]').forEach(btn => {
-    btn.addEventListener('click', () => openDetail(btn.dataset.refType, btn.dataset.refId));
-  });
-
-  renderDetailFoot(type, item);
-
-  if (!$('detailDialog').open) $('detailDialog').showModal();
+function refListGroup(label, items, emptyText) {
+  return `<div class="field-group"><div class="field-label">${escapeHtml(label)} (${items.length})</div>${
+    items.length ? `<div class="ref-list">${items.join('')}</div>` : `<div class="field-value empty">${emptyText || 'keine'}</div>`}</div>`;
 }
 
 function renderAkteurDetailBody(a) {
   const b = akteurBackrefs(a.id);
   let html = '';
-  html += fieldGroup('Art', escapeHtml(a.art));
-  html += a.zu ? fieldGroup('Zugehörigkeit', refButton('akteure', a.zu, akteurName(a.zu) || '(unbekannt)'))
-                : '';
+  html += fieldGroup('Aufgenommen, weil', a.kurznotiz ? escapeHtml(a.kurznotiz) : '–', !a.kurznotiz);
+  html += fieldGroup('Art', escapeHtml(a.art || '–'));
+  if (a.zu) html += fieldGroup('Gehört zu', refButton('akteure', a.zu, akteurName(a.zu) || '(unbekannt)'));
   html += fieldGroup('Ort', a.ort ? escapeHtml(a.ort) : '–', !a.ort);
-  html += fieldGroup('Themen', (a.themen || []).length ? a.themen.map(t => `<span class="theme-tag">${escapeHtml(t)}</span>`).join(' ') : '–', !(a.themen || []).length);
   html += fieldGroup('Web', a.web ? webLink(a.web) : '–', !a.web);
-  html += fieldGroup('Kurznotiz', a.kurznotiz ? escapeHtml(a.kurznotiz) : '–', !a.kurznotiz);
   html += fieldGroup('Notiz', a.notiz ? escapeHtml(a.notiz) : '–', !a.notiz);
   if (a.quelle) html += fieldGroup('Quelle', escapeHtml(a.quelle));
-
-  html += `<div class="field-group"><div class="field-label">Veranstaltungen (${b.veranstaltungen.length})</div>`;
-  html += b.veranstaltungen.length
-    ? `<div class="ref-list">${b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel, `${formatDateRange(x.item.datum, x.item.bis)}${x.rolle ? ' · ' + x.rolle : ''}`)).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
-
-  html += `<div class="field-group"><div class="field-label">Ideen (${b.ideen.length})</div>`;
-  html += b.ideen.length
-    ? `<div class="ref-list">${b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel, x.warum)).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
-
-  if (b.zugehoerige.length) {
-    html += `<div class="field-group"><div class="field-label">Zugehörige Akteure (${b.zugehoerige.length})</div>`;
-    html += `<div class="ref-list">${b.zugehoerige.map(x => refButton('akteure', x.id, x.name, x.art)).join('')}</div></div>`;
-  }
+  html += refListGroup('Projekte', b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel,
+    [formatDateRange(x.item.datum, x.item.bis), x.rolle].filter(Boolean).join(' · '))));
+  html += refListGroup('Ideen', b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel, x.warum)));
+  if (b.zugehoerige.length) html += refListGroup('Zugehörige Akteure', b.zugehoerige.map(x => refButton('akteure', x.id, x.name, x.art)));
   return html;
 }
 
 function renderVeranstaltungDetailBody(v) {
   const b = veranstaltungBackrefs(v.id);
   let html = '';
-  html += fieldGroup('Datum', formatDateRange(v.datum, v.bis));
-  html += fieldGroup('Zeit', v.zeit ? escapeHtml(v.zeit) : '–', !v.zeit);
+  html += fieldGroup('Datum', v.datum ? escapeHtml(formatDateRange(v.datum, v.bis)) + (v.zeit ? ', ' + escapeHtml(v.zeit) : '') : '–', !v.datum);
   html += fieldGroup('Ort', v.ort ? escapeHtml(v.ort) : '–', !v.ort);
   html += fieldGroup('Format', v.format ? escapeHtml(v.format) : '–', !v.format);
-  html += fieldGroup('Reihe', v.reihe ? escapeHtml(v.reihe) : '–', !v.reihe);
-
-  html += `<div class="field-group"><div class="field-label">Beteiligte (${(v.beteiligte || []).length})</div>`;
-  html += (v.beteiligte || []).length
-    ? `<div class="ref-list">${v.beteiligte.map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.rolle)).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
-
+  if (v.reihe) html += fieldGroup('Reihe', escapeHtml(v.reihe));
+  html += refListGroup('Beteiligte', (v.beteiligte || []).map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.rolle)));
   html += fieldGroup('Beschrieb', v.beschrieb ? escapeHtml(v.beschrieb) : '–', !v.beschrieb);
   if (v.quelle) html += fieldGroup('Quelle', escapeHtml(v.quelle));
-
-  html += `<div class="field-group"><div class="field-label">Ideen, die darauf verweisen (${b.ideen.length})</div>`;
-  html += b.ideen.length
-    ? `<div class="ref-list">${b.ideen.map(i => refButton('ideen', i.id, i.titel)).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
+  html += refListGroup('Ideen, die darauf verweisen', b.ideen.map(i => refButton('ideen', i.id, i.titel)));
   return html;
 }
 
 function renderIdeeDetailBody(i) {
   let html = '';
-  const ordnerName = i.ordner ? ((DATA.ideenOrdner[i.ordner] || {}).name) : '';
-  html += fieldGroup('Ordner', ordnerName ? escapeHtml(ordnerName) : '–', !ordnerName);
   html += fieldGroup('Text', i.text ? escapeHtml(i.text) : '–', !i.text);
-
-  html += `<div class="field-group"><div class="field-label">Akteure (${(i.akteure || []).length})</div>`;
-  html += (i.akteure || []).length
-    ? `<div class="ref-list">${i.akteure.map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.warum)).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
-
-  html += `<div class="field-group"><div class="field-label">Veranstaltungen (${(i.veranstaltungen || []).length})</div>`;
-  html += (i.veranstaltungen || []).length
-    ? `<div class="ref-list">${i.veranstaltungen.map(vid => { const v = DATA.veranstaltungen[vid]; return v && !v.deleted ? refButton('veranstaltungen', vid, v.titel, formatDateRange(v.datum, v.bis)) : ''; }).join('')}</div>`
-    : `<div class="field-value empty">keine</div>`;
-  html += `</div>`;
-
+  html += refListGroup('Akteure', (i.akteure || []).map(x => refButton('akteure', x.id, akteurName(x.id) || '(gelöscht)', x.warum)));
+  html += refListGroup('Projekte', (i.veranstaltungen || []).map(vid => {
+    const v = DATA.veranstaltungen[vid];
+    return v && !v.deleted ? refButton('veranstaltungen', vid, v.titel, formatDateRange(v.datum, v.bis)) : '';
+  }).filter(Boolean));
   html += fieldGroup('Erstellt', formatDate(i.erstellt));
   return html;
 }
 
-function renderDetailFoot(type, item) {
-  const foot = $('detailFoot');
-  foot.innerHTML = '';
+function renderKartei() {
+  const host = $('karteiInner');
+  const sel = currentSelection();
+  if (!sel) {
+    host.innerHTML = `<div class="kartei-empty">Kein Eintrag ausgewählt.</div>`;
+    return;
+  }
+  const { type, id } = sel;
+  const item = Store.get(type, id);
+  const badges = [];
+  if (type === 'akteure' && istZusammengearbeitet(id)) badges.push('zusammengearbeitet');
+  if (type === 'veranstaltungen' && item.eigene) badges.push('eigenes Projekt');
 
+  host.innerHTML = `
+    <div class="kartei-head">
+      ${karteiHistory.length ? `<button type="button" class="icon-btn kartei-back" id="karteiBack" aria-label="Zurück">
+        <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>` : ''}
+      <div class="kartei-head-main">
+        <div class="kartei-eyebrow">${TYPE_LABEL[type]}</div>
+        <h2 class="kartei-title" id="karteiTitle" tabindex="-1">${escapeHtml(titleOf(type, item))}</h2>
+        ${badges.length ? `<div class="kartei-badges">${badges.map(b => `<span class="text-badge">${escapeHtml(b)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+    <div class="kartei-body">
+      <div class="field-group">
+        <div class="field-label" id="knChipsLabel">Knotenpunkte</div>
+        <div class="kn-chips" id="knChips" role="group" aria-labelledby="knChipsLabel"></div>
+      </div>
+      ${type === 'akteure' ? renderAkteurDetailBody(item) : type === 'veranstaltungen' ? renderVeranstaltungDetailBody(item) : renderIdeeDetailBody(item)}
+    </div>
+    <div class="kartei-foot dialog-foot" id="karteiFoot"></div>`;
+
+  renderKnotenChips(type, id);
+
+  host.querySelectorAll('[data-ref-type]').forEach(btn => {
+    btn.addEventListener('click', () => selectEntry(btn.dataset.refType, btn.dataset.refId, { fromRef: true }));
+  });
+  const back = $('karteiBack');
+  if (back) back.addEventListener('click', () => {
+    const prev = karteiHistory.pop();
+    if (prev) selectEntry(prev.type, prev.id, { viaBack: true, focusKartei: true });
+  });
+
+  const foot = $('karteiFoot');
   const editBtn = document.createElement('button');
   editBtn.className = 'btn btn-primary';
   editBtn.type = 'button';
   editBtn.textContent = 'Bearbeiten';
-  editBtn.addEventListener('click', () => openForm(type, item.id));
+  editBtn.addEventListener('click', () => openForm(type, id));
   foot.appendChild(editBtn);
-
   if (type === 'akteure') {
     const ideeBtn = document.createElement('button');
     ideeBtn.className = 'btn';
     ideeBtn.type = 'button';
     ideeBtn.textContent = 'Idee mit diesem Akteur';
-    ideeBtn.addEventListener('click', () => openForm('ideen', null, { prefillAkteur: item.id }));
+    ideeBtn.addEventListener('click', () => openForm('ideen', null, { prefillAkteur: id }));
     foot.appendChild(ideeBtn);
   }
-
   foot.appendChild(Object.assign(document.createElement('div'), { className: 'btn-spacer' }));
-
   const delBtn = document.createElement('button');
   delBtn.className = 'btn btn-danger';
   delBtn.type = 'button';
   delBtn.textContent = 'Löschen';
-  attachDeleteButton(delBtn, type, item.id, () => {
-    closeDetail();
-    renderAll();
-  });
+  attachDeleteButton(delBtn, type, id, () => { closeDetail(); renderAll(); });
   foot.appendChild(delBtn);
+}
+
+function renderKnotenChips(type, id, opts = {}) {
+  const host = $('knChips');
+  const item = Store.get(type, id);
+  host.innerHTML = '';
+  themenOf(item).forEach(k => {
+    const chip = document.createElement('span');
+    chip.className = 'kn-chip';
+    chip.innerHTML = `${escapeHtml(k)}<button type="button" aria-label="${escapeHtml(k)} entfernen">×</button>`;
+    chip.querySelector('button').addEventListener('click', () => {
+      setThemen(type, id, themenOf(Store.get(type, id)).filter(t => t !== k));
+      saveLocal();
+      renderKnoten(); renderListe(); markSelectedRow();
+      renderKnotenChips(type, id, { focusAdd: true });
+      announce(`${k} entfernt`);
+    });
+    host.appendChild(chip);
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'kn-add';
+  add.textContent = '+ Knotenpunkt';
+  add.addEventListener('click', () => openKnotenAddInline(type, id));
+  host.appendChild(add);
+  if (opts.openInput) openKnotenAddInline(type, id);
+  else if (opts.focusAdd) add.focus();
+}
+
+function openKnotenAddInline(type, id) {
+  const host = $('knChips');
+  const add = host.querySelector('.kn-add');
+  ensureKnotenDatalist();
+  const wrap = document.createElement('span');
+  wrap.className = 'kn-add-inline';
+  wrap.innerHTML = `<label for="knAddInput" class="sr-only">Knotenpunkt hinzufügen</label>
+    <input type="text" id="knAddInput" class="inline-input" list="knotenNamesList" autocomplete="off" placeholder="Knotenpunkt …">
+    <button type="button" class="btn" style="padding:3px 10px">Hinzufügen</button>`;
+  add.replaceWith(wrap);
+  const input = wrap.querySelector('input');
+  input.focus();
+  function commit() {
+    const raw = input.value.trim();
+    if (!raw) { renderKnotenChips(type, id, { focusAdd: true }); return; }
+    const k = findKnoten(raw) || raw;
+    const th = themenOf(Store.get(type, id));
+    if (!th.includes(k)) setThemen(type, id, [...th, k]);
+    if (!DATA.themenVokabular.includes(k)) { DATA.themenVokabular.push(k); DATA.themenVokabular.sort(cmpDe); }
+    saveLocal();
+    renderKnoten(); renderListe(); markSelectedRow();
+    renderKnotenChips(type, id, { openInput: true });   // gleich den nächsten erfassen können
+    announce(`${k} hinzugefügt`);
+  }
+  wrap.querySelector('button').addEventListener('click', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); renderKnotenChips(type, id, { focusAdd: true }); }
+  });
 }
 
 function attachDeleteButton(btn, type, id, onDeleted) {
   let armed = false;
   let timer = null;
   const warnId = 'warn-' + Math.random().toString(36).slice(2, 8);
-
   function reset() {
     armed = false;
     btn.textContent = 'Löschen';
@@ -1808,7 +1915,6 @@ function attachDeleteButton(btn, type, id, onDeleted) {
     const w = document.getElementById(warnId);
     if (w) w.remove();
   }
-
   btn.addEventListener('click', () => {
     if (!armed) {
       const refs = referencingFor(type, id);
@@ -1832,16 +1938,118 @@ function attachDeleteButton(btn, type, id, onDeleted) {
   });
 }
 
-function closeDetail() {
-  if ($('detailDialog').open) $('detailDialog').close();
-  dialogStack = [];
-  currentDetail = null;
+/* =========================================================================
+   Gesamt-Rendering & Bereichswechsel
+   ========================================================================= */
+function renderAll() {
+  ensureVokabular();
+  ensureKnotenDatalist();
+  renderKnoten();
+  renderListe();
+  renderKartei();
 }
 
-function refreshDetailIfShowing(type, id) {
-  if ($('detailDialog').open && currentDetail && currentDetail.type === type && currentDetail.id === id) {
-    openDetail(type, id, { viaBack: true });
-  }
+// Projekte chronologisch: beim Öffnen so scrollen, dass die Linie im oberen Drittel steht
+function scrollToTodayLine() {
+  const line = document.querySelector('#entryList .today-line');
+  if (!line) return;
+  const list = $('entryList');
+  list.scrollTop = Math.max(0, line.offsetTop - list.offsetTop - list.clientHeight / 3);
+}
+
+function switchView(view, { focus = false } = {}) {
+  closeKnotenMenu(false);
+  currentView = view;
+  localStorage.setItem(TAB_KEY, view);
+  AREAS.forEach(v => {
+    const tab = $('tab-' + v);
+    const active = v === view;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
+  renderListHead();
+  renderKnoten();
+  renderListe();
+  if (view === 'agenda' && listSort.agenda === 'chrono' && !selected.agenda) scrollToTodayLine();
+  renderKartei();
+  if (focus) $('tab-' + view).focus();
+}
+
+/* =========================================================================
+   Spaltenbreiten & Einklappen
+   ========================================================================= */
+const LAYOUT_KEY = 'feld_layout_v1';
+const LIMITS = { knoten: [160, 420], kartei: [300, 760] };
+let layout = { knoten: 230, kartei: 420, knotenCollapsed: false, karteiCollapsed: false };
+
+function loadLayout() {
+  try { Object.assign(layout, JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}')); } catch (e) {}
+}
+function saveLayout() { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch (e) {} }
+
+function applyLayout() {
+  const root = document.documentElement.style;
+  root.setProperty('--w-knoten', layout.knoten + 'px');
+  root.setProperty('--w-kartei', layout.kartei + 'px');
+  [['knoten', 'Knoten', 'Knotenpunkte'], ['kartei', 'Kartei', 'Kartei']].forEach(([key, Cap, label]) => {
+    const collapsed = layout[key + 'Collapsed'];
+    $('col' + Cap).classList.toggle('collapsed', collapsed);
+    $(key + 'Collapse').setAttribute('aria-expanded', String(!collapsed));
+    $(key + 'Rail').setAttribute('aria-expanded', String(!collapsed));
+    $('resize' + Cap).hidden = collapsed;
+    const sep = $('resize' + Cap);
+    sep.setAttribute('aria-valuemin', LIMITS[key][0]);
+    sep.setAttribute('aria-valuemax', LIMITS[key][1]);
+    sep.setAttribute('aria-valuenow', layout[key]);
+    sep.setAttribute('aria-valuetext', `${layout[key]} Pixel`);
+  });
+}
+
+function setWidth(key, w) {
+  layout[key] = Math.round(Math.min(LIMITS[key][1], Math.max(LIMITS[key][0], w)));
+  applyLayout();
+  saveLayout();
+}
+
+function wireLayout() {
+  [['knoten', 'Knoten', 1], ['kartei', 'Kartei', -1]].forEach(([key, Cap, dir]) => {
+    const sep = $('resize' + Cap);
+    sep.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      sep.setPointerCapture(e.pointerId);
+      sep.classList.add('dragging');
+      const startX = e.clientX, startW = layout[key];
+      const move = ev => setWidth(key, startW + dir * (ev.clientX - startX));
+      const up = () => {
+        sep.classList.remove('dragging');
+        sep.removeEventListener('pointermove', move);
+        sep.removeEventListener('pointerup', up);
+      };
+      sep.addEventListener('pointermove', move);
+      sep.addEventListener('pointerup', up);
+    });
+    sep.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 48 : 16;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setWidth(key, layout[key] - dir * step); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); setWidth(key, layout[key] + dir * step); }
+      if (e.key === 'Home') { e.preventDefault(); setWidth(key, LIMITS[key][0]); }
+      if (e.key === 'End') { e.preventDefault(); setWidth(key, LIMITS[key][1]); }
+    });
+    $(key + 'Collapse').addEventListener('click', () => {
+      layout[key + 'Collapsed'] = true; applyLayout(); saveLayout(); $(key + 'Rail').focus();
+    });
+    $(key + 'Rail').addEventListener('click', () => {
+      layout[key + 'Collapsed'] = false; applyLayout(); saveLayout(); $(key + 'Collapse').focus();
+    });
+  });
+  // Schmale Bildschirme: Spalten als Overlay
+  $('knotenOpenNarrow').addEventListener('click', () => { document.body.classList.add('knoten-open'); $('knotenCloseNarrow').focus(); });
+  $('knotenCloseNarrow').addEventListener('click', () => { document.body.classList.remove('knoten-open'); $('knotenOpenNarrow').focus(); });
+  $('karteiCloseNarrow').addEventListener('click', () => {
+    document.body.classList.remove('kartei-open');
+    const row = Array.from(document.querySelectorAll('#entryList .entry-row')).find(r => r.dataset.id === selected[currentView]);
+    (row ? row.querySelector('.entry') : $('listSort')).focus();
+  });
 }
 
 /* =========================================================================
@@ -1989,11 +2197,11 @@ function formTemplate(type) {
       <input type="text" id="f-ort">
     </div>
     <div class="form-field" id="f-themen-field">
-      <label>Themen</label>
+      <label>Knotenpunkte</label>
       <div class="theme-picker"></div>
       <div class="theme-add-row">
-        <input type="text" class="theme-add-input" placeholder="Neues Thema …">
-        <button type="button" class="btn theme-add-btn">+</button>
+        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
+        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
       </div>
     </div>
     <div class="form-field">
@@ -2001,7 +2209,7 @@ function formTemplate(type) {
       <input type="text" id="f-web" placeholder="ohne https://">
     </div>
     <div class="form-field">
-      <label for="f-kurznotiz">Kurznotiz <span style="font-weight:400">— erscheint vollständig in der Liste</span></label>
+      <label for="f-kurznotiz">Aufgenommen, weil <span style="font-weight:400">— erscheint in der Liste unter dem Namen</span></label>
       <input type="text" id="f-kurznotiz" maxlength="${KURZNOTIZ_MAXLEN}">
       <div class="form-field-hint" id="f-kurznotiz-hint"></div>
     </div>
@@ -2025,8 +2233,8 @@ function formTemplate(type) {
     </div>
     <div class="form-row">
       <div class="form-field">
-        <label for="f-datum">Datum <span class="req">*</span></label>
-        <input type="date" id="f-datum" required>
+        <label for="f-datum">Datum <span style="font-weight:400">(optional)</span></label>
+        <input type="date" id="f-datum">
       </div>
       <div class="form-field">
         <label for="f-bis">Bis</label>
@@ -2055,7 +2263,15 @@ function formTemplate(type) {
     </div>
     <div class="form-field checkbox-field">
       <input type="checkbox" id="f-eigene">
-      <label for="f-eigene">Eigene Veranstaltung</label>
+      <label for="f-eigene">Eigenes Projekt</label>
+    </div>
+    <div class="form-field" id="f-themen-field">
+      <label>Knotenpunkte</label>
+      <div class="theme-picker"></div>
+      <div class="theme-add-row">
+        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
+        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
+      </div>
     </div>
     <div class="form-field">
       <label>Beteiligte</label>
@@ -2079,22 +2295,23 @@ function formTemplate(type) {
       <label for="f-text">Text</label>
       <textarea id="f-text"></textarea>
     </div>
+    <div class="form-field" id="f-themen-field">
+      <label>Knotenpunkte</label>
+      <div class="theme-picker"></div>
+      <div class="theme-add-row">
+        <input type="text" class="theme-add-input" placeholder="Neuer Knotenpunkt …" aria-label="Neuer Knotenpunkt">
+        <button type="button" class="btn theme-add-btn" aria-label="Knotenpunkt hinzufügen">+</button>
+      </div>
+    </div>
     <div class="form-field">
       <label>Akteure</label>
       <div class="sub-rows" id="f-akteure"></div>
     </div>
     <div class="form-field">
-      <label>Veranstaltungen</label>
+      <label>Projekte</label>
       <div class="sub-rows" id="f-veranstaltungen"></div>
     </div>
-    <div class="form-field" id="f-ordner-field">
-      <label for="f-ordner">Ordner</label>
-      <select id="f-ordner"></select>
-      <div class="ordner-add-row">
-        <input type="text" class="ordner-add-input" placeholder="Neuer Ordner …">
-        <button type="button" class="btn ordner-add-btn">+</button>
-      </div>
-    </div>`;
+`;
 }
 
 function wireAkteurForm(item) {
@@ -2145,6 +2362,7 @@ function wireVeranstaltungForm(item) {
   const beteiligteEditor = buildSubRowsEditor($('f-beteiligte'), beteiligteRows,
     [{ key: 'name', placeholder: 'Name', list: 'akteurNamesList' }, { key: 'rolle', placeholder: 'Rolle', list: 'roleList' }],
     '+ Beteiligte/r');
+  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
   $('f-beschrieb').value = item.beschrieb || '';
   $('f-quelle').value = item.quelle || '';
 
@@ -2157,6 +2375,7 @@ function wireVeranstaltungForm(item) {
     format: $('f-format').value.trim(),
     reihe: $('f-reihe').value.trim(),
     eigene: $('f-eigene').checked,
+    themen: themePicker.getValues(),
     beteiligte: beteiligteEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), rolle: r.rolle })).filter(r => r.id),
     beschrieb: $('f-beschrieb').value.trim(),
     quelle: $('f-quelle').value.trim(),
@@ -2167,6 +2386,7 @@ function wireIdeeForm(item, opts) {
   ensureHilfsDatalisten();
   $('f-titel').value = item.titel || '';
   $('f-text').value = item.text || '';
+  const themePicker = buildThemePicker($('f-themen-field'), (item.themen || []).slice());
   let akteureRows = (item.akteure || []).map(a => ({ name: akteurName(a.id) || '', warum: a.warum || '' }));
   if (!akteureRows.length && opts && opts.prefillAkteur) {
     akteureRows = [{ name: akteurName(opts.prefillAkteur) || '', warum: '' }];
@@ -2178,47 +2398,23 @@ function wireIdeeForm(item, opts) {
     .map(vid => { const v = DATA.veranstaltungen[vid]; return v && !v.deleted ? { name: v.titel } : null; })
     .filter(Boolean);
   const veranstaltungenEditor = buildSubRowsEditor($('f-veranstaltungen'), veranstaltungenRows,
-    [{ key: 'name', placeholder: 'Titel der Veranstaltung', list: 'veranstaltungTitelList' }],
-    '+ Veranstaltung');
-
-  const ordnerSelect = $('f-ordner');
-  function refreshOrdnerOptions(selectedId) {
-    const keep = selectedId !== undefined ? selectedId : ordnerSelect.value;
-    ordnerSelect.innerHTML = '<option value="">Kein Ordner</option>' +
-      Store.list('ideenOrdner').sort((a, b) => a.name.localeCompare(b.name, 'de'))
-        .map(o => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('');
-    ordnerSelect.value = keep || '';
-  }
-  refreshOrdnerOptions(item.ordner || '');
-  const ordnerField = $('f-ordner-field');
-  const ordnerAddInput = ordnerField.querySelector('.ordner-add-input');
-  const ordnerAddBtn = ordnerField.querySelector('.ordner-add-btn');
-  ordnerAddBtn.addEventListener('click', () => {
-    const val = ordnerAddInput.value.trim();
-    if (!val) return;
-    const id = Store.put('ideenOrdner', null, { name: val });
-    ordnerAddInput.value = '';
-    refreshOrdnerOptions(id);
-  });
-  ordnerAddInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); ordnerAddBtn.click(); }
-  });
+    [{ key: 'name', placeholder: 'Titel des Projekts', list: 'veranstaltungTitelList' }],
+    '+ Projekt');
 
   return () => {
-    const ordner = ordnerSelect.value || '';
     let reihenfolge = item.reihenfolge;
     if (reihenfolge == null) {
-      const siblings = Store.list('ideen').filter(i => (i.ordner || '') === ordner && i.id !== item.id);
+      const siblings = Store.list('ideen').filter(i => i.id !== item.id);
       reihenfolge = siblings.length ? Math.max(...siblings.map(s => s.reihenfolge || 0)) + 10 : 10;
     }
     return {
       titel: $('f-titel').value.trim(),
       text: $('f-text').value.trim(),
+      themen: themePicker.getValues(),
       akteure: akteureEditor.getValues().map(r => ({ id: resolveOrCreateAkteur(r.name, 'Person'), warum: r.warum })).filter(r => r.id),
       veranstaltungen: veranstaltungenEditor.getValues()
         .map(r => Store.list('veranstaltungen').find(v => normalize(v.titel) === normalize(r.name))?.id)
         .filter(Boolean),
-      ordner,
       reihenfolge,
     };
   };
@@ -2230,9 +2426,8 @@ function openForm(type, id, opts = {}) {
   if (!isNew && !item) return;
   ensureAkteurDatalist();
 
-  const typeNounNeu = { akteure: 'Neuer Akteur', veranstaltungen: 'Neue Veranstaltung', ideen: 'Neue Idee' };
   $('formEyebrow').textContent = (isNew ? 'Neu' : 'Bearbeiten') + ' · ' + TYPE_LABEL[type];
-  $('formTitle').textContent = isNew ? typeNounNeu[type] : (type === 'akteure' ? item.name : item.titel);
+  $('formTitle').textContent = isNew ? NEU_LABEL[type] : (type === 'akteure' ? item.name : item.titel);
 
   const body = $('formBody');
   body.innerHTML = formTemplate(type);
@@ -2250,8 +2445,7 @@ function openForm(type, id, opts = {}) {
     const savedId = Store.put(type, isNew ? null : id, fields);
     closeForm();
     renderAll();
-    if (wasNew) openDetail(type, savedId);
-    else refreshDetailIfShowing(type, savedId);
+    selectEntry(type, savedId, { focusKartei: true });
     announce(`${TYPE_LABEL[type]} gespeichert`);
   };
 
@@ -2384,6 +2578,7 @@ function mergeIncomingPayload(payload) {
   if (Array.isArray(payload.themenVokabular)) {
     payload.themenVokabular.forEach(t => { if (t && !DATA.themenVokabular.includes(t)) DATA.themenVokabular.push(t); });
   }
+  migrateOrdnerZuKnoten();
   return stats;
 }
 
@@ -2475,31 +2670,26 @@ function downloadTemplate() {
         name: 'Pflichtfeld: Name der Person/Initiative/Institution',
         art: 'Person | Initiative | Institution',
         zu: 'ID eines anderen Akteurs, oder leer',
-        ort: '', themen: ['Thema aus dem Vokabular'], web: '',
-        kurznotiz: `kurze Notiz, max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint vollständig in der Liste`, notiz: '',
+        ort: '', themen: ['Knotenpunkt'], web: '',
+        kurznotiz: `«Aufgenommen, weil», max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint in der Liste`, notiz: '',
         zusammenarbeit: false, quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
     veranstaltungen: {
       'beispiel-id': {
-        titel: 'Pflichtfeld', datum: 'YYYY-MM-DD, Pflichtfeld', bis: '', zeit: '', ort: '',
-        format: '', reihe: '', eigene: false,
+        titel: 'Pflichtfeld', datum: 'YYYY-MM-DD, optional', bis: '', zeit: '', ort: '',
+        format: '', reihe: '', eigene: false, themen: ['Knotenpunkt'],
         beteiligte: [{ id: 'akteur-id', rolle: 'veranstaltend' }],
         beschrieb: '', quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
     ideen: {
       'beispiel-id': {
-        titel: 'Pflichtfeld', text: '',
+        titel: 'Pflichtfeld', text: '', themen: ['Knotenpunkt'],
         akteure: [{ id: 'akteur-id', warum: '' }],
         veranstaltungen: ['veranstaltung-id'],
-        ordner: 'ID eines Ideen-Ordners, oder leer', reihenfolge: 'Zahl, für manuelle Sortierung, optional',
+        reihenfolge: 'Zahl, für manuelle Sortierung, optional',
         erstellt: 'YYYY-MM-DD', modified: 'ISO-Zeitstempel, optional',
-      },
-    },
-    ideenOrdner: {
-      'beispiel-ordner-id': {
-        name: 'Pflichtfeld: Name des Ordners', modified: 'ISO-Zeitstempel, optional',
       },
     },
   };
@@ -2528,134 +2718,95 @@ function importFile(file) {
   reader.readAsText(file);
 }
 
+
 /* =========================================================================
-   Themenvokabular-Verwaltung (Einstellungen)
+   Themenvokabular-Verwaltung (Einstellungen) → «Knotenpunkte»
    ========================================================================= */
 function renderThemaVocabSettings() {
+  ensureVokabular();
   $('themaVocabList').innerHTML = DATA.themenVokabular
-    .map(t => `<span class="chip" aria-pressed="false" style="cursor:default">${escapeHtml(t)}</span>`).join('');
+    .map(t => `<span class="chip" style="cursor:default">${escapeHtml(t)}</span>`).join('');
 }
 
 /* =========================================================================
    Init / Event-Verdrahtung
    ========================================================================= */
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
 function wireTabs() {
-  ['verzeichnis', 'agenda', 'ideen'].forEach(v => {
-    $('tab-' + v).addEventListener('click', () => switchView(v));
-  });
-}
-
-function wireFilters() {
-  $('artFilter').querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const art = chip.dataset.art;
-      const pressed = chip.getAttribute('aria-pressed') === 'true';
-      chip.setAttribute('aria-pressed', String(!pressed));
-      if (pressed) filterArt.delete(art); else filterArt.add(art);
-      renderVerzeichnis();
-    });
-  });
-  $('themaFilter').addEventListener('change', () => {
-    filterThema = $('themaFilter').value;
-    renderVerzeichnis();
-  });
-  $('zusammenarbeitFilter').addEventListener('change', () => {
-    filterZusammenarbeit = $('zusammenarbeitFilter').checked;
-    renderVerzeichnis();
-  });
-
-  $('eigeneFilter').querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      filterEigene = chip.dataset.eigene;
-      $('eigeneFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-      renderAgenda();
-    });
-  });
-  $('zeitFilter').querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      filterZeit = chip.dataset.zeit;
-      $('zeitFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-      renderAgenda();
-    });
-  });
-}
-
-function wireIdeenToolbar() {
-  $('ideenSortFilter').querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      ideenSort = chip.dataset.sort;
-      localStorage.setItem(IDEEN_SORT_KEY, ideenSort);
-      $('ideenSortFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
-      renderIdeen();
-    });
-  });
-
-  const addBtn = $('btnNeuerOrdner');
-  const inline = $('ordnerAddInline');
-  const input = $('ordnerAddInlineInput');
-  function confirmNeuerOrdner() {
-    const val = input.value.trim();
-    if (val) Store.put('ideenOrdner', null, { name: val });
-    inline.hidden = true;
-    addBtn.hidden = false;
-    renderIdeen();
-  }
-  function cancelNeuerOrdner() {
-    inline.hidden = true;
-    addBtn.hidden = false;
-  }
-  addBtn.addEventListener('click', () => {
-    inline.hidden = false;
-    addBtn.hidden = true;
-    input.value = '';
-    input.focus();
-  });
-  $('ordnerAddInlineConfirm').addEventListener('click', confirmNeuerOrdner);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); confirmNeuerOrdner(); }
-    if (e.key === 'Escape') { e.preventDefault(); cancelNeuerOrdner(); }
+  AREAS.forEach(v => $('tab-' + v).addEventListener('click', () => switchView(v)));
+  $('tabs').addEventListener('keydown', e => {
+    const idx = AREAS.indexOf(currentView);
+    let next = null;
+    if (e.key === 'ArrowRight') next = AREAS[(idx + 1) % AREAS.length];
+    if (e.key === 'ArrowLeft') next = AREAS[(idx - 1 + AREAS.length) % AREAS.length];
+    if (e.key === 'Home') next = AREAS[0];
+    if (e.key === 'End') next = AREAS[AREAS.length - 1];
+    if (next) { e.preventDefault(); switchView(next, { focus: true }); }
   });
 }
 
 function wireSearch() {
   const input = $('searchInput');
   const wrap = $('searchForm');
+  $('kbdHint').textContent = IS_MAC ? '⌘F' : 'Strg F';
   const doSearch = debounce(() => {
     searchQuery = input.value;
     wrap.classList.toggle('has-value', !!searchQuery);
-    renderAll();
+    renderKnoten(); renderListe();
+    announceCount();
   }, 120);
   input.addEventListener('input', doSearch);
   $('searchClear').addEventListener('click', () => {
     input.value = '';
     searchQuery = '';
     wrap.classList.remove('has-value');
-    renderAll();
+    renderKnoten(); renderListe();
+    announceCount();
     input.focus();
   });
   wrap.addEventListener('submit', e => e.preventDefault());
 }
 
-function wireNewPicker() {
-  $('btnNew').addEventListener('click', () => { if (!$('pickerDialog').open) $('pickerDialog').showModal(); });
-  $('pickerClose').addEventListener('click', () => $('pickerDialog').close());
-  $('pickerDialog').querySelectorAll('.picker-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const type = { akteur: 'akteure', veranstaltung: 'veranstaltungen', idee: 'ideen' }[btn.dataset.type];
-      $('pickerDialog').close();
-      openForm(type, null);
-    });
+function wireListe() {
+  $('btnPlus').addEventListener('click', () => openForm(TAB_TYPE[currentView], null));
+  $('listSort').addEventListener('change', () => {
+    listSort[currentView] = $('listSort').value;
+    try { localStorage.setItem(SORT_KEY, JSON.stringify(listSort)); } catch (e) {}
+    renderListe();
+    if (currentView === 'agenda' && listSort.agenda === 'chrono') scrollToTodayLine();
+  });
+  $('knotenSort').value = knotenSort;
+  $('knotenSort').addEventListener('change', () => {
+    knotenSort = $('knotenSort').value;
+    try { localStorage.setItem(KNOTEN_SORT_KEY, knotenSort); } catch (e) {}
+    renderKnoten();
+  });
+  // Pfeiltasten in der Liste: nächster/vorheriger Eintrag, Auswahl folgt dem Fokus
+  $('entryList').addEventListener('keydown', e => {
+    if (!e.target.classList.contains('entry')) return;
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const all = Array.from(document.querySelectorAll('#entryList .entry'));
+    const i = all.indexOf(e.target);
+    const next = all[i + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+    next.click();
   });
 }
 
+function wireKnotenDialog() {
+  ['kdName', 'kdAdd', 'kdMerge'].forEach(id => $(id).addEventListener('input', () => { resetKdDelete(); updateKdPreview(); }));
+  document.querySelectorAll('input[name="kdScope"]').forEach(cb => cb.addEventListener('change', updateKdPreview));
+  $('kdForm').addEventListener('submit', e => { e.preventDefault(); applyKnotenEdit(); });
+  $('kdCancel').addEventListener('click', () => closeKnotenDialog());
+  $('kdClose').addEventListener('click', () => closeKnotenDialog());
+  $('kdDelete').addEventListener('click', deleteKnoten);
+  $('knotenDialog').addEventListener('cancel', e => { e.preventDefault(); closeKnotenDialog(); });
+}
+
 function wireDialogs() {
-  $('detailClose').addEventListener('click', closeDetail);
-  $('detailDialog').addEventListener('close', () => { dialogStack = []; currentDetail = null; });
-  $('detailBack').addEventListener('click', () => {
-    if (!dialogStack.length) return;
-    const prev = dialogStack.pop();
-    openDetail(prev.type, prev.id, { viaBack: true });
-  });
   $('formClose').addEventListener('click', closeForm);
 }
 
@@ -2706,11 +2857,11 @@ function wireSettings() {
   $('themaVocabAdd').addEventListener('click', () => {
     const val = $('themaVocabInput').value.trim();
     if (!val) return;
-    if (!DATA.themenVokabular.includes(val)) {
+    if (!findKnoten(val)) {
       DATA.themenVokabular.push(val);
       saveLocal();
       renderThemaVocabSettings();
-      populateThemaFilter();
+      ensureKnotenDatalist();
     }
     $('themaVocabInput').value = '';
   });
@@ -2728,51 +2879,66 @@ function wireSettings() {
   });
 }
 
+function anyDialogOpen() {
+  return ['formDialog', 'settingsDialog', 'knotenDialog'].some(id => $(id).open);
+}
+
 function wireKeyboard() {
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     const tag = (e.target.tagName || '').toLowerCase();
     const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
-    const anyDialogOpen = ['detailDialog', 'formDialog', 'pickerDialog', 'settingsDialog'].some(id => $(id).open);
 
-    if (e.key === '/' && !isTyping && !anyDialogOpen) {
+    // ⌘F / Strg+F → Suche (ersetzt die Browsersuche, solange kein Dialog offen ist)
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'f' && !anyDialogOpen()) {
+      e.preventDefault();
+      $('searchInput').focus();
+      $('searchInput').select();
+      return;
+    }
+    if (e.key === '/' && !isTyping && !anyDialogOpen()) {
       e.preventDefault();
       $('searchInput').focus();
       return;
     }
-    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !isTyping && !anyDialogOpen) {
-      const order = ['verzeichnis', 'agenda', 'ideen'];
-      const idx = order.indexOf(currentView);
-      const next = order[(idx + (e.key === 'ArrowRight' ? 1 : -1) + order.length) % order.length];
-      e.preventDefault();
-      switchView(next, { focus: true });
+    if (e.key === 'Escape' && !anyDialogOpen()) {
+      if (openMenuState) return; // Menü behandelt Esc selbst
+      if (document.body.classList.contains('knoten-open')) { $('knotenCloseNarrow').click(); return; }
+      if (document.body.classList.contains('kartei-open') && window.matchMedia('(max-width: 860px)').matches) { $('karteiCloseNarrow').click(); }
     }
   });
 }
 
 function init() {
   loadLocal();
+  loadLayout();
+  try {
+    const s = JSON.parse(localStorage.getItem(SORT_KEY) || '{}');
+    AREAS.forEach(a => { if (s[a] && SORT_OPTIONS[a].some(([v]) => v === s[a])) listSort[a] = s[a]; });
+  } catch (e) {}
+  // Alte Ideen-Sortierung aus der Vorversion übernehmen
+  const oldIdeenSort = localStorage.getItem(IDEEN_SORT_KEY);
+  if (oldIdeenSort && !localStorage.getItem(SORT_KEY) && SORT_OPTIONS.ideen.some(([v]) => v === oldIdeenSort)) listSort.ideen = oldIdeenSort;
+  const ks = localStorage.getItem(KNOTEN_SORT_KEY);
+  if (ks === 'az' || ks === 'haeufigkeit') knotenSort = ks;
+
   wireTabs();
-  wireFilters();
-  wireIdeenToolbar();
   wireSearch();
-  wireNewPicker();
+  wireListe();
+  wireLayout();
+  wireKnotenDialog();
   wireDialogs();
   wireSettings();
   wireKeyboard();
-
-  const savedSort = localStorage.getItem(IDEEN_SORT_KEY);
-  if (savedSort && ['neu', 'alt', 'az', 'manuell'].includes(savedSort)) {
-    ideenSort = savedSort;
-    $('ideenSortFilter').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.sort === ideenSort)));
-  }
+  applyLayout();
 
   const savedTab = localStorage.getItem(TAB_KEY);
   if (savedTab && TAB_TYPE[savedTab]) currentView = savedTab;
+  migrateOrdnerZuKnoten();
+  ensureVokabular();
+  ensureKnotenDatalist();
   switchView(currentView);
 
   setSyncStatus(syncConfig ? 'idle' : 'off');
-  renderAll();
-
   if (syncConfig) syncNow();
 }
 
