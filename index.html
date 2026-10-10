@@ -162,11 +162,16 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .collapse-btn { width: 28px; height: 28px; }
 .collapse-btn svg { width: 15px; height: 15px; }
 .mini-select {
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;
   background: transparent; border: 1px solid transparent; border-radius: 6px;
-  color: var(--muted); font-size: 12.5px; padding: 3px 4px;
+  color: var(--muted); font-size: 12.5px; padding: 3px 4px 3px 6px; line-height: 1.3;
 }
-.mini-select:hover { border-color: var(--line-2); color: var(--text); }
-.mini-select option { background: var(--raised); color: var(--text); }
+.mini-select:hover, .mini-select[aria-expanded="true"] { border-color: var(--line-2); color: var(--text); }
+.mini-select .ms-chev { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.2; flex-shrink: 0; }
+/* Kopfzeile der Knotenpunkte: nichts schrumpft, die Mindestbreite der Spalte wird daraus gemessen */
+#colKnoten .col-head { gap: 4px; }
+#colKnoten .col-head > * { flex-shrink: 0; }
+#colKnoten .col-head .col-title { margin-right: auto; padding-right: 4px; }
 .only-narrow { display: none !important; }
 
 /* ---------- Knotenpunkte ---------- */
@@ -203,6 +208,9 @@ body.is-resizing { cursor: col-resize; user-select: none; }
   background: transparent; color: var(--text);
 }
 .menu button:hover, .menu button:focus-visible { background: #343a42; outline: none; }
+.menu.menu-compact { min-width: 150px; }
+.menu [role="menuitemradio"]::before { content: ""; display: inline-block; width: 18px; color: var(--accent); }
+.menu [role="menuitemradio"][aria-checked="true"]::before { content: "✓"; }
 
 /* ---------- Einträge ---------- */
 .list-head { padding: 12px 14px 8px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
@@ -309,10 +317,15 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .rel-remove { margin-left: auto; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 15px; flex-shrink: 0; }
 .rel-remove:hover { background: var(--sel); color: var(--danger); }
 .rel-add { display: flex; gap: 6px; margin-top: 6px; }
-.rel-add input { flex: 1; min-width: 0; height: 30px; background: var(--bg); border: 1px dashed var(--line-3); border-radius: 7px; padding: 0 8px; color: var(--text); }
-.rel-add input:focus { border-style: solid; border-color: var(--accent); outline: none; }
-.rel-add input[aria-invalid="true"] { border-color: var(--danger); }
-.rel-add .btn { padding: 3px 10px; }
+.rel-list:empty { display: none; }
+.rel-sub { color: var(--muted); font-size: 12.5px; margin-left: 6px; }
+.rel-link .rel-sub { text-decoration: none; display: block; margin-left: 0; font-size: 12px; }
+a.rel-link { text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: none; flex: 1 1 auto; }
+a.rel-link:hover { text-decoration: underline; }
+/* Eigene Projekte: gleiche Farbe wie die Raute ◆ in der Liste */
+.rel-row.is-own { border-color: rgba(196,165,255,0.45); background: rgba(196,165,255,0.07); }
+.rel-row.is-own .rel-link { color: var(--diamond); }
+.rel-own-mark { color: var(--diamond); font-size: 10px; margin-right: 5px; }
 .kartei-saved { font-size: 12px; color: var(--muted); }
 .kartei-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .text-badge { font-size: 12px; border-radius: 5px; padding: 1px 7px; border: 1px solid var(--diamond); color: var(--diamond); }
@@ -333,8 +346,11 @@ body.is-resizing { cursor: col-resize; user-select: none; }
   border: 1px dashed var(--line-3); background: none; color: var(--muted);
 }
 .kn-add:hover { color: var(--text); border-color: var(--muted); }
-.kn-add-inline { display: inline-flex; gap: 6px; align-items: center; }
-.kn-add-inline input { height: 28px; width: 190px; }
+/* «+ X»-Oval wird beim Anklicken selbst zum Eingabefeld, die Form bleibt */
+input.kn-add { color: var(--text); background: var(--bg); width: auto; min-width: 9em; font-size: 13px; }
+input.kn-add::placeholder { color: var(--muted); }
+input.kn-add:focus { outline: none; border-color: var(--accent); }
+input.kn-add[aria-invalid="true"] { border-color: var(--danger); }
 
 .field-group { margin-bottom: 16px; }
 .field-label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 4px; }
@@ -530,12 +546,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     <div class="col-content" id="knotenContent">
       <div class="col-head">
         <h2 class="col-title" id="knotenTitle">Knotenpunkte</h2>
-        <span class="grow"></span>
-        <label for="knotenSort" class="sr-only">Knotenpunkte sortieren</label>
-        <select id="knotenSort" class="mini-select">
-          <option value="az">A–Z</option>
-          <option value="haeufigkeit">Häufigkeit</option>
-        </select>
+        <button type="button" class="mini-select" id="knotenSort" aria-haspopup="menu" aria-expanded="false"><span class="sr-only">Knotenpunkte sortieren: </span><span class="ms-val"></span><svg class="ms-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <button type="button" class="icon-btn collapse-btn" id="knotenCollapse" aria-expanded="true" aria-controls="knotenContent" aria-label="Knotenpunkte einklappen">
           <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
@@ -555,8 +566,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
         <h1 class="list-title" id="listTitle">Akteure</h1>
         <span class="list-count" id="listCount"></span>
         <span class="grow" style="flex:1"></span>
-        <label for="listSort" class="sr-only">Sortierung</label>
-        <select id="listSort" class="mini-select"></select>
+        <button type="button" class="mini-select" id="listSort" aria-haspopup="menu" aria-expanded="false"><span class="sr-only">Sortierung: </span><span class="ms-val"></span><svg class="ms-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <button type="button" class="btn-plus" id="btnPlus" aria-label="Neuer Akteur">+</button>
       </div>
       <div class="list-head-row" id="filterRow"></div>
@@ -649,6 +659,16 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
   <div class="dialog-body">
 
     <div class="settings-section">
+      <h3>Ich</h3>
+      <p class="settings-hint" id="cfgIchHint">Der Akteur, der du selbst bist. Projekte, an denen er beteiligt ist, gelten als eigene (◆). Wer mit ihm an einem Projekt beteiligt oder mit ihm verbunden ist, gilt als «zusammengearbeitet».</p>
+      <div class="form-field">
+        <label for="cfg-ich">Akteur</label>
+        <input type="text" id="cfg-ich" list="akteurNamesList" autocomplete="off" aria-describedby="cfgIchHint">
+      </div>
+      <div class="settings-status" id="ichStatus"></div>
+    </div>
+
+    <div class="settings-section">
       <h3>GitHub-Sync</h3>
       <p class="settings-hint">
         Daten liegen als JSON in einem separaten GitHub-Repository.
@@ -712,7 +732,7 @@ const EIGENE_IDS = ['vspw', 'lokal']; // eigene Organisationen, siehe KONZEPT 5.
 const KURZNOTIZ_MAXLEN = 100;
 const IDEEN_SORT_KEY = 'feld_ideen_sort_v1';
 
-let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, ideenOrdner: {}, themenVokabular: THEMEN_KERN.slice() };
+let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, ideenOrdner: {}, themenVokabular: THEMEN_KERN.slice(), ich: '' };
 let syncConfig = null;
 let remoteSha = null;
 let syncInFlight = false;
@@ -818,6 +838,7 @@ function loadLocal() {
       DATA.ideenOrdner = parsed.ideenOrdner || {};
       DATA.themenVokabular = (Array.isArray(parsed.themenVokabular) && parsed.themenVokabular.length)
         ? parsed.themenVokabular : THEMEN_KERN.slice();
+      DATA.ich = parsed.ich || '';
     }
   } catch (e) { console.error('Lokale Daten nicht lesbar', e); }
 
@@ -834,6 +855,7 @@ function saveLocal() {
     version: 1,
     updated: nowISO(),
     themenVokabular: DATA.themenVokabular,
+    ich: DATA.ich || '',
     akteure: DATA.akteure,
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
@@ -887,12 +909,42 @@ const Store = {
 /* =========================================================================
    Abgeleitete Werte (Ableiten statt pflegen, KONZEPT 4.)
    ========================================================================= */
+// «Ich» = der Akteur, der der User selbst ist (Einstellungen). E28
+function ichId() {
+  const id = DATA.ich;
+  return id && DATA.akteure[id] && !DATA.akteure[id].deleted ? id : '';
+}
+
+// Eigenes Projekt = ich bin beteiligt (E28, ersetzt das Feld `eigene`)
+function istEigen(v) {
+  const ich = ichId();
+  return !!ich && (v.beteiligte || []).some(b => b.id === ich);
+}
+
+// Zusammengearbeitet = mit mir an einem Projekt beteiligt oder mit mir verbunden (E29, ersetzt E03)
 function istZusammengearbeitet(akteurId) {
+  const ich = ichId();
   const a = DATA.akteure[akteurId];
-  if (!a || a.deleted) return false;
-  if (a.zusammenarbeit) return true;
+  if (!ich || akteurId === ich || !a || a.deleted) return false;
+  if (verbundeneOf(akteurId).some(x => x.id === ich)) return true;
   return Store.list('veranstaltungen').some(v =>
-    v.eigene && (v.beteiligte || []).some(b => b.id === akteurId));
+    (v.beteiligte || []).some(b => b.id === akteurId) && (v.beteiligte || []).some(b => b.id === ich));
+}
+
+// Verbindungen zwischen Akteuren (E30, ersetzt «Gehört zu»): gespeichert auf einer
+// Seite (`verbunden: [{id, wie}]`), angezeigt und bearbeitbar auf beiden.
+function verbundeneOf(id) {
+  const out = [];
+  const self = DATA.akteure[id];
+  (self && !self.deleted ? self.verbunden || [] : []).forEach(x => {
+    if (akteurName(x.id) && !out.some(o => o.id === x.id)) out.push({ id: x.id, wie: x.wie || '', holder: id });
+  });
+  Store.list('akteure').forEach(a => {
+    if (a.id === id) return;
+    const x = (a.verbunden || []).find(v => v.id === id);
+    if (x && !out.some(o => o.id === a.id)) out.push({ id: a.id, wie: x.wie || '', holder: a.id });
+  });
+  return out.sort((a, b) => cmpDe(akteurName(a.id), akteurName(b.id)));
 }
 
 function veranstaltungStatus(v) {
@@ -921,11 +973,7 @@ function akteurBackrefs(id) {
   });
   ideen.sort((a, b) => (b.item.erstellt || '').localeCompare(a.item.erstellt || ''));
 
-  const zugehoerige = Store.list('akteure')
-    .filter(a => a.zu === id)
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-
-  return { veranstaltungen, ideen, zugehoerige };
+  return { veranstaltungen, ideen, verbunden: verbundeneOf(id) };
 }
 
 function veranstaltungBackrefs(id) {
@@ -942,7 +990,7 @@ function referencingFor(type, id) {
     const out = [];
     b.veranstaltungen.forEach(x => out.push(`Projekt „${x.item.titel}"`));
     b.ideen.forEach(x => out.push(`Idee „${x.item.titel}"`));
-    b.zugehoerige.forEach(x => out.push(`Akteur „${x.name}" (gehört zu)`));
+    b.verbunden.forEach(x => out.push(`Akteur „${akteurName(x.id)}" (verbunden)`));
     return out;
   }
   if (type === 'veranstaltungen') {
@@ -969,8 +1017,8 @@ function stripReferencesTo(type, id) {
       i.modified = nowISO();
     });
     Object.entries(DATA.akteure).forEach(([aid, a]) => {
-      if (a.deleted || a.zu !== id) return;
-      a.zu = '';
+      if (a.deleted || !(a.verbunden || []).some(x => x.id === id)) return;
+      a.verbunden = a.verbunden.filter(x => x.id !== id);
       a.modified = nowISO();
     });
   }
@@ -996,13 +1044,13 @@ function deleteWithIntegrity(type, id) {
 }
 
 // Unbekannte Namen in Beteiligten-/Ideenformularen werden als neue Akteure
-// angelegt (KONZEPT 4.). art: 'Person' (Standard) oder 'Institution' (für «Gehört zu»).
+// angelegt (KONZEPT 4.). art: 'Person' (Standard).
 function resolveOrCreateAkteur(name, art) {
   name = (name || '').trim();
   if (!name) return null;
   const existing = Store.list('akteure').find(a => normalize(a.name) === normalize(name));
   if (existing) return existing.id;
-  return Store.put('akteure', null, { name, art: art || 'Person', themen: [], zu: '', zusammenarbeit: false });
+  return Store.put('akteure', null, { name, art: art || 'Person', themen: [], verbunden: [] });
 }
 
 /* =========================================================================
@@ -1014,11 +1062,11 @@ function getSearchWords() {
 
 function haystackFor(type, item) {
   if (type === 'akteure') {
-    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.kurznotiz, item.notiz, item.web, akteurName(item.zu)];
+    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.kurznotiz, item.notiz, item.web, ...verbundeneOf(item.id).map(x => akteurName(x.id))];
   }
   if (type === 'veranstaltungen') {
     const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
-    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...beteiligteNamen];
+    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...(item.links || []), ...beteiligteNamen];
   }
   if (type === 'ideen') {
     const namen = (item.akteure || []).map(a => akteurName(a.id));
@@ -1118,6 +1166,67 @@ function migrateOrdnerZuKnoten() {
   return true;
 }
 
+// Umstellung E28–E31 (2026-10-09). Idempotent, läuft beim Start und nach Sync/Import:
+// - «Ich» festlegen (Akteur «Léonard Wiesendanger»), falls noch nicht gesetzt
+// - `eigene: true` → ich werde Beteiligter, das Feld entfällt (eigen wird abgeleitet)
+// - manuelles `zusammenarbeit` entfällt; einmalig (vom User so bestimmt):
+//   Die Fussnote wird mit mir verbunden («Leitung»), für die AG Nachhaltigkeit entsteht
+//   das Projekt «Artikelreihe «Nachhaltiges Basel»» mit ihr und mir als Beteiligten
+// - `zu` (Gehört zu) → `verbunden`
+function migrateE28() {
+  let changed = false;
+  // Zeitstempel nur minimal erhöhen: setzt sich im Sync durch, ohne «Zuletzt geändert» zu verfälschen
+  const touch = o => {
+    const t = Date.parse(o.modified || '');
+    o.modified = isNaN(t) ? nowISO() : new Date(t + 1).toISOString();
+    changed = true;
+  };
+  if (!ichId()) {
+    const me = Store.list('akteure').find(a => normalize(a.name) === normalize('Léonard Wiesendanger'));
+    if (me) { DATA.ich = me.id; changed = true; }
+  }
+  const ich = ichId();
+  if (ich) {
+    Object.values(DATA.veranstaltungen).forEach(v => {
+      if (v.deleted || !('eigene' in v)) return;
+      const add = v.eigene === true && !(v.beteiligte || []).some(b => b.id === ich);
+      if (add) v.beteiligte = [...(v.beteiligte || []), { id: ich, rolle: '' }];
+      delete v.eigene;
+      if (add) touch(v); else changed = true;
+    });
+    Object.entries(DATA.akteure).forEach(([id, a]) => {
+      if (a.deleted || !('zusammenarbeit' in a)) return;
+      if (a.zusammenarbeit === true && id === 'fussnote' && !(a.verbunden || []).some(x => x.id === ich)) {
+        a.verbunden = [...(a.verbunden || []), { id: ich, wie: 'Leitung' }];
+      }
+      if (a.zusammenarbeit === true && id === 'agnach' && !DATA.veranstaltungen['artikelreihe-nachhaltiges-basel']) {
+        // feste ID, damit mehrere Geräte nicht je ein eigenes Projekt anlegen
+        DATA.veranstaltungen['artikelreihe-nachhaltiges-basel'] = {
+          titel: 'Artikelreihe «Nachhaltiges Basel»', datum: '', format: 'Artikelreihe', reihe: 'jetztzeit',
+          beteiligte: [{ id: 'agnach', rolle: '' }, { id: ich, rolle: '' }], links: [], themen: [], modified: nowISO(),
+        };
+      }
+      const was = a.zusammenarbeit === true;
+      delete a.zusammenarbeit;
+      if (was) touch(a); else changed = true;
+    });
+  }
+  const fn = DATA.akteure.fussnote;
+  if (ich && fn && !fn.deleted && (fn.verbunden || []).some(x => x.id === ich && x.wie === 'erstellt')) {
+    fn.verbunden = fn.verbunden.map(x => x.id === ich && x.wie === 'erstellt' ? { ...x, wie: 'Leitung' } : x);
+    touch(fn);
+  }
+  Object.values(DATA.akteure).forEach(a => {
+    if (a.deleted || !('zu' in a)) return;
+    const move = a.zu && DATA.akteure[a.zu] && !(a.verbunden || []).some(x => x.id === a.zu);
+    if (move) a.verbunden = [...(a.verbunden || []), { id: a.zu, wie: '' }];
+    delete a.zu;
+    if (move) touch(a); else changed = true;
+  });
+  if (changed) saveLocal();
+  return changed;
+}
+
 /* =========================================================================
    Filter & Sortierung
    ========================================================================= */
@@ -1127,8 +1236,8 @@ function applyAreaFilters(area, items) {
     if (filterZusammenarbeit) items = items.filter(a => istZusammengearbeitet(a.id));
   }
   if (area === 'agenda') {
-    if (filterEigene === 'eigene') items = items.filter(v => v.eigene);
-    if (filterEigene === 'dritte') items = items.filter(v => !v.eigene);
+    if (filterEigene === 'eigene') items = items.filter(v => istEigen(v));
+    if (filterEigene === 'dritte') items = items.filter(v => !istEigen(v));
   }
   return items;
 }
@@ -1250,27 +1359,34 @@ function onMenuOutside(e) {
 }
 
 function toggleKnotenMenu(btn, k) {
+  openMenu(btn, [
+    { label: 'Bearbeiten …', fn: () => openKnotenDialog(k) },
+    { label: 'Nur diesen auswählen', fn: () => { selectedKnoten = new Set([k]); afterKnotenChange(k); } },
+  ], { label: k });
+}
+
+// Allgemeines Pop-up-Menü (⋯-Menü und Auswahlknöpfe). items: [{label, fn, checked?}]
+// Mit `checked` werden die Einträge zu menuitemradio (Auswahl mit ✓).
+function openMenu(btn, items, o = {}) {
   if (openMenuState && openMenuState.btn === btn) { closeKnotenMenu(true); return; }
   closeKnotenMenu(false);
   const menu = document.createElement('div');
-  menu.className = 'menu';
+  menu.className = 'menu' + (o.compact ? ' menu-compact' : '');
   menu.setAttribute('role', 'menu');
-  menu.setAttribute('aria-label', k);
-  const items = [
-    ['Bearbeiten …', () => openKnotenDialog(k)],
-    ['Nur diesen auswählen', () => { selectedKnoten = new Set([k]); afterKnotenChange(k); }],
-  ];
-  items.forEach(([label, fn]) => {
+  menu.setAttribute('aria-label', o.label || '');
+  items.forEach(it => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.setAttribute('role', 'menuitem');
+    const radio = typeof it.checked === 'boolean';
+    b.setAttribute('role', radio ? 'menuitemradio' : 'menuitem');
+    if (radio) b.setAttribute('aria-checked', String(it.checked));
     b.tabIndex = -1;
-    b.textContent = label;
-    b.addEventListener('click', () => { closeKnotenMenu(false); fn(); });
+    b.textContent = it.label;
+    b.addEventListener('click', () => { closeKnotenMenu(!!o.returnFocus); it.fn(); });
     menu.appendChild(b);
   });
   menu.addEventListener('keydown', e => {
-    const its = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    const its = Array.from(menu.querySelectorAll('button'));
     const i = its.indexOf(document.activeElement);
     if (e.key === 'ArrowDown') { e.preventDefault(); its[(i + 1) % its.length].focus(); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); its[(i - 1 + its.length) % its.length].focus(); }
@@ -1281,7 +1397,9 @@ function toggleKnotenMenu(btn, k) {
   });
   document.body.appendChild(menu);
   const r = btn.getBoundingClientRect();
-  const left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8);
+  const alignRight = o.alignRight;
+  let left = alignRight ? r.right - menu.offsetWidth : r.left;
+  left = Math.min(left, window.innerWidth - menu.offsetWidth - 8);
   let top = r.bottom + 4;
   if (top + menu.offsetHeight > window.innerHeight - 8) top = r.top - menu.offsetHeight - 4;
   menu.style.left = Math.max(8, left) + 'px';
@@ -1289,7 +1407,29 @@ function toggleKnotenMenu(btn, k) {
   btn.setAttribute('aria-expanded', 'true');
   openMenuState = { el: menu, btn };
   document.addEventListener('mousedown', onMenuOutside, true);
-  menu.querySelector('[role="menuitem"]').focus();
+  (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button')).focus();
+}
+
+// Auswahlknopf statt <select>: so breit wie der aktuelle Wert, Pfeil direkt dahinter.
+// options: [[wert, label], …]
+function setupMenuSelect(id, options, value, onChange, label) {
+  const btn = $(id);
+  if (!btn) return;
+  const show = v => {
+    btn.dataset.value = v;
+    const opt = options.find(([x]) => x === v) || options[0];
+    btn.querySelector('.ms-val').textContent = opt[1];
+  };
+  show(value);
+  btn.onclick = () => openMenu(btn, options.map(([v, l]) => ({
+    label: l, checked: v === btn.dataset.value,
+    fn: () => { if (v !== btn.dataset.value) { show(v); onChange(v); } },
+  })), { label, compact: true, returnFocus: true, alignRight: btn.closest('#colKnoten') ? false : true });
+  btn.onkeydown = e => { if (e.key === 'ArrowDown') { e.preventDefault(); btn.click(); } };
+}
+
+function menuSelectHtml(id, srLabel) {
+  return `<button type="button" class="mini-select" id="${id}" aria-haspopup="menu" aria-expanded="false"><span class="sr-only">${escapeHtml(srLabel)}: </span><span class="ms-val"></span><svg class="ms-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`;
 }
 
 /* =========================================================================
@@ -1426,35 +1566,31 @@ function renderListHead() {
   $('btnPlus').setAttribute('aria-label', NEU_LABEL[type]);
   $('btnPlus').title = NEU_LABEL[type];
 
-  const sortSel = $('listSort');
-  sortSel.innerHTML = SORT_OPTIONS[area].map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-  sortSel.value = listSort[area];
+  setupMenuSelect('listSort', SORT_OPTIONS[area], listSort[area], v => {
+    listSort[currentView] = v;
+    try { localStorage.setItem(SORT_KEY, JSON.stringify(listSort)); } catch (e) {}
+    renderListe();
+    if (currentView === 'agenda' && listSort.agenda === 'chrono') scrollToTodayLine();
+  }, 'Sortierung');
 
   // Bereichsspezifische Filter (bleiben bewusst klein)
   const row = $('filterRow');
   row.innerHTML = '<span id="activeKnoten" style="display:contents"></span>';
   if (area === 'verzeichnis') {
     row.insertAdjacentHTML('beforeend', `
-      <label for="artFilter" class="sr-only">Art</label>
-      <select id="artFilter" class="mini-select">
-        <option value="">Alle Arten</option><option>Person</option><option>Initiative</option><option>Institution</option>
-      </select>
+      ${menuSelectHtml('artFilter', 'Art')}
       <button type="button" class="toggle" id="zusammenFilter" aria-pressed="${filterZusammenarbeit}">zusammengearbeitet</button>`);
-    $('artFilter').value = filterArt;
-    $('artFilter').addEventListener('change', () => { filterArt = $('artFilter').value; renderKnoten(); renderListe(); announceCount(); });
+    setupMenuSelect('artFilter', [['', 'Alle Arten'], ['Person', 'Person'], ['Initiative', 'Initiative'], ['Institution', 'Institution']], filterArt,
+      v => { filterArt = v; renderKnoten(); renderListe(); announceCount(); }, 'Art');
     $('zusammenFilter').addEventListener('click', () => {
       filterZusammenarbeit = !filterZusammenarbeit;
       $('zusammenFilter').setAttribute('aria-pressed', String(filterZusammenarbeit));
       renderKnoten(); renderListe(); announceCount();
     });
   } else if (area === 'agenda') {
-    row.insertAdjacentHTML('beforeend', `
-      <label for="eigeneFilter" class="sr-only">Eigene oder Dritte</label>
-      <select id="eigeneFilter" class="mini-select">
-        <option value="alle">Eigene und Dritte</option><option value="eigene">Nur eigene</option><option value="dritte">Nur Dritte</option>
-      </select>`);
-    $('eigeneFilter').value = filterEigene;
-    $('eigeneFilter').addEventListener('change', () => { filterEigene = $('eigeneFilter').value; renderKnoten(); renderListe(); announceCount(); });
+    row.insertAdjacentHTML('beforeend', menuSelectHtml('eigeneFilter', 'Eigene oder Dritte'));
+    setupMenuSelect('eigeneFilter', [['alle', 'Eigene und Dritte'], ['eigene', 'Nur eigene'], ['dritte', 'Nur Dritte']], filterEigene,
+      v => { filterEigene = v; renderKnoten(); renderListe(); announceCount(); }, 'Eigene oder Dritte');
   }
 }
 
@@ -1559,7 +1695,7 @@ function renderListe() {
 
 function wichtigsteBeteiligte(v) {
   return (v.beteiligte || [])
-    .filter(b => !EIGENE_IDS.includes(b.id) && b.rolle !== 'Förderung')
+    .filter(b => !EIGENE_IDS.includes(b.id) && b.id !== ichId() && b.rolle !== 'Förderung')
     .map(b => akteurName(b.id))
     .filter(Boolean)
     .join(', ');
@@ -1577,7 +1713,7 @@ function entryRow(type, item) {
     tag = item.art || '';
     if (item.kurznotiz) lines += `<span class="entry-why">${escapeHtml(item.kurznotiz)}</span>`;
   } else if (type === 'veranstaltungen') {
-    if (item.eigene) { marker = '◆'; markerSr = 'eigenes Projekt'; }
+    if (istEigen(item)) { marker = '◆'; markerSr = 'eigenes Projekt'; }
     const meta = [formatDateRange(item.datum, item.bis), item.format, item.ort].filter(Boolean).join(' · ');
     if (meta) lines += `<span class="entry-meta">${escapeHtml(meta)}</span>`;
     const bet = wichtigsteBeteiligte(item);
@@ -1799,9 +1935,9 @@ function closeDetail() {
 function createNew(type, prefill = {}) {
   discardEmptyDraft();
   const base = type === 'akteure'
-    ? { name: '', art: 'Person', themen: [], zu: '', zusammenarbeit: false }
+    ? { name: '', art: 'Person', themen: [], verbunden: [] }
     : type === 'veranstaltungen'
-      ? { titel: '', datum: '', eigene: false, beteiligte: [], themen: [] }
+      ? { titel: '', datum: '', beteiligte: [], links: [], themen: [] }
       : { titel: '', text: '', akteure: [], veranstaltungen: [], themen: [] };
   const fields = { ...base, ...prefill };
   if (type === 'ideen') {
@@ -1890,57 +2026,138 @@ function refButton(type, id, label, sub) {
 }
 
 function webHref(web) { return /^https?:\/\//.test(web) ? web : `https://${web}`; }
+function shortUrl(u) { return String(u || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, ''); }
 
-// Bearbeitbare Beziehungsliste (Beteiligte, Akteure einer Idee, Projekte einer Idee)
+/* ---------- «+ X»-Oval: Knopf, der beim Anklicken selbst zum Eingabefeld wird (E32) ----------
+   Gleiche Form vor und nach dem Klick. Enter übernimmt, Esc bricht ab, Verlassen mit Text übernimmt. */
+function pillHtml(key, label) {
+  return `<button type="button" class="kn-add" data-pill="${key}">+ ${escapeHtml(label)}</button>`;
+}
+
+// o: { label, list, commit(value, {viaEnter}) → false = ungültig }
+function openPill(btn, o) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'kn-add';
+  input.dataset.pillInput = btn.dataset.pill;
+  if (o.list) input.setAttribute('list', o.list);
+  input.autocomplete = 'off';
+  input.placeholder = o.label + ' …';
+  input.setAttribute('aria-label', `${o.label} hinzufügen`);
+  input.size = Math.max(12, o.label.length + 4);
+  let done = false;
+  const restore = focus => {
+    if (done) return;
+    done = true;
+    if (input.isConnected) input.replaceWith(btn);
+    if (focus) btn.focus();
+  };
+  const commit = viaEnter => {
+    if (done) return;
+    const v = input.value.trim();
+    if (!v) { restore(viaEnter); return; }
+    done = true;   // vor dem Neuzeichnen setzen: das Entfernen des Felds kann ein blur auslösen
+    if (o.commit(v, { viaEnter }) === false) {
+      done = false;
+      input.setAttribute('aria-invalid', 'true');
+      if (!viaEnter) restore(false);
+    }
+  };
+  input.addEventListener('input', () => { input.removeAttribute('aria-invalid'); input.size = Math.max(12, input.value.length + 2); });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); restore(true); }
+  });
+  input.addEventListener('blur', () => commit(false));
+  btn.replaceWith(input);
+  input.focus();
+}
+
+function wirePill(host, key, o) {
+  const btn = host.querySelector(`[data-pill="${key}"]`);
+  if (btn) btn.addEventListener('click', () => openPill(btn, o));
+}
+
+/* ---------- Beziehungslisten ----------
+   Jede Beziehung lässt sich von beiden Seiten bearbeiten (E32). Gespeichert wird weiterhin
+   auf einer Seite: Projekt.beteiligte, Idee.akteure, Idee.veranstaltungen, Akteur.verbunden.
+   rows: [{type, id, label, sub?, extra?, own?, href?}] */
 function relEditor(key, label, rows, o) {
   return `<div class="field-group rel" data-rel="${key}">
     <div class="field-label" id="rel-${key}-label">${escapeHtml(label)} (${rows.length})</div>
-    <ul class="rel-list" aria-labelledby="rel-${key}-label">
-      ${rows.map((r, i) => `<li class="rel-row" data-idx="${i}">
-        <button type="button" class="rel-link" data-ref-type="${r.type}" data-ref-id="${escapeHtml(r.id)}">${escapeHtml(r.label)}</button>
-        ${o.extraKey ? `<input type="text" class="rel-extra" data-idx="${i}" value="${escapeHtml(r.extra || '')}" placeholder="${escapeHtml(o.extraPlaceholder)}" ${o.extraList ? `list="${o.extraList}"` : ''} aria-label="${escapeHtml(o.extraPlaceholder)} – ${escapeHtml(r.label)}">` : ''}
+    <ul class="rel-list" aria-labelledby="rel-${key}-label">${rows.map((r, i) => `
+      <li class="rel-row${r.own ? ' is-own' : ''}" data-idx="${i}" data-id="${escapeHtml(r.id || '')}">
+        ${r.href
+          ? `<a class="rel-link" href="${escapeHtml(r.href)}" target="_blank" rel="noopener">${escapeHtml(r.label)}<span class="sr-only"> (neues Fenster)</span> ↗</a>`
+          : `<button type="button" class="rel-link" data-ref-type="${r.type}" data-ref-id="${escapeHtml(r.id)}">${r.own ? '<span class="rel-own-mark" aria-hidden="true">◆</span>' : ''}${escapeHtml(r.label)}${r.sub ? `<span class="rel-sub">${escapeHtml(r.sub)}</span>` : ''}${r.own ? '<span class="sr-only">, eigenes Projekt</span>' : ''}</button>`}
+        ${o.extraPlaceholder ? `<input type="text" class="rel-extra" data-idx="${i}" value="${escapeHtml(r.extra || '')}" placeholder="${escapeHtml(o.extraPlaceholder)}" ${o.extraList ? `list="${o.extraList}"` : ''} aria-label="${escapeHtml(o.extraPlaceholder)} – ${escapeHtml(r.label)}">` : ''}
         <button type="button" class="rel-remove" data-idx="${i}" aria-label="${escapeHtml(r.label)} entfernen">×</button>
       </li>`).join('')}
     </ul>
-    <div class="rel-add">
-      <input type="text" class="rel-add-name" list="${o.list}" autocomplete="off" placeholder="${escapeHtml(o.addPlaceholder)}" aria-label="${escapeHtml(o.addPlaceholder)}">
-      ${o.extraKey ? `<input type="text" class="rel-add-extra" ${o.extraList ? `list="${o.extraList}"` : ''} placeholder="${escapeHtml(o.extraPlaceholder)}" aria-label="${escapeHtml(o.extraPlaceholder)}">` : ''}
-      <button type="button" class="btn rel-add-btn">Hinzufügen</button>
-    </div>
+    <div class="rel-add">${pillHtml(key, o.addLabel)}</div>
   </div>`;
 }
 
+// o: { rows, addLabel, list, extraPlaceholder?, remove(row), setExtra(row, val), add(name) → id | false }
 function wireRelEditor(host, key, o) {
   const box = host.querySelector(`[data-rel="${key}"]`);
   if (!box) return;
   box.querySelectorAll('.rel-remove').forEach(b => b.addEventListener('click', () => {
-    o.remove(Number(b.dataset.idx));
-    renderKartei({ focus: `[data-rel="${key}"] .rel-add-name` });
+    const r = o.rows[Number(b.dataset.idx)];
+    o.remove(r);
+    announce(`${r.label} entfernt`);
+    renderKartei({ focus: `[data-rel="${key}"] [data-pill]` });
   }));
   box.querySelectorAll('.rel-extra').forEach(inp => {
-    const save = () => o.setExtra(Number(inp.dataset.idx), inp.value.trim());
+    const save = () => o.setExtra(o.rows[Number(inp.dataset.idx)], inp.value.trim());
     inp.addEventListener('input', debounce(save, 400));
     inp.addEventListener('change', save);
   });
-  const nameIn = box.querySelector('.rel-add-name');
-  const extraIn = box.querySelector('.rel-add-extra');
-  const add = () => {
-    const name = nameIn.value.trim();
-    if (!name) { nameIn.focus(); return; }
-    const ok = o.add(name, extraIn ? extraIn.value.trim() : '');
-    if (ok === false) return;
-    renderKartei({ focus: `[data-rel="${key}"] .rel-add-name` });
-  };
-  box.querySelector('.rel-add-btn').addEventListener('click', add);
-  [nameIn, extraIn].filter(Boolean).forEach(inp => inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); add(); }
-  }));
+  wirePill(box, key, {
+    label: o.addLabel, list: o.list,
+    commit: (name, { viaEnter }) => {
+      const id = o.add(name);
+      if (id === false) return false;
+      scheduleListRefresh();
+      // Fokus: Zusatzfeld der neuen Zeile (Rolle, Warum, Verbindung), sonst wieder das Oval
+      const sel = o.extraPlaceholder && id
+        ? `[data-rel="${key}"] .rel-row[data-id="${CSS.escape(id)}"] .rel-extra`
+        : `[data-rel="${key}"] [data-pill]`;
+      renderKartei({ focus: viaEnter ? sel : null });
+    },
+  });
+}
+
+function findByTitel(type, name) {
+  return Store.list(type).find(x => normalize(x.titel) === normalize(name)) || null;
+}
+
+// Legt still einen Eintrag an (ohne die Kartei zu wechseln)
+function createProjektQuiet(titel, fields = {}) {
+  const id = Store.put('veranstaltungen', null, { titel, datum: '', beteiligte: [], links: [], themen: [], ...fields });
+  announce(`Projekt «${titel}» angelegt`);
+  return id;
+}
+function createIdeeQuiet(titel, fields = {}) {
+  const max = Math.max(0, ...Store.list('ideen').map(i => i.reihenfolge || 0));
+  const id = Store.put('ideen', null, { titel, text: '', akteure: [], veranstaltungen: [], themen: [], reihenfolge: max + 10, ...fields });
+  announce(`Idee «${titel}» angelegt`);
+  return id;
 }
 
 /* ---------- Karteikarten je Typ ---------- */
-function akteurBody(a) {
+function akteurRels(a) {
   const b = akteurBackrefs(a.id);
-  const zuName = a.zu ? akteurName(a.zu) : '';
+  return {
+    verbunden: b.verbunden.map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id), extra: x.wie, holder: x.holder })),
+    projekte: b.veranstaltungen.map(x => ({ type: 'veranstaltungen', id: x.item.id, label: x.item.titel || '(ohne Titel)',
+      sub: formatDateRange(x.item.datum, x.item.bis), extra: x.rolle, own: istEigen(x.item) })),
+    ideen: b.ideen.map(x => ({ type: 'ideen', id: x.item.id, label: x.item.titel || '(ohne Titel)', extra: x.warum })),
+  };
+}
+
+function akteurBody(a) {
+  const rel = akteurRels(a);
   let html = '';
   html += kfText('Aufgenommen, weil', 'kurznotiz', a.kurznotiz, {
     maxlength: KURZNOTIZ_MAXLEN, placeholder: 'Kurz: warum im Verzeichnis – erscheint in der Liste',
@@ -1953,53 +2170,79 @@ function akteurBody(a) {
       <select id="kf-art" data-field="art">${['Person', 'Initiative', 'Institution'].map(x => `<option${x === a.art ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
     ${kfText('Ort', 'ort', a.ort)}
   </div>`;
-  html += `<div class="kf"><label class="field-label" for="kf-zu">Gehört zu</label>
-    ${a.zu && zuName
-      ? `<div class="rel-row rel-single"><button type="button" class="rel-link" data-ref-type="akteure" data-ref-id="${escapeHtml(a.zu)}">${escapeHtml(zuName)}</button>
-         <button type="button" class="rel-remove" id="kf-zu-clear" aria-label="Zugehörigkeit zu ${escapeHtml(zuName)} entfernen">×</button></div>`
-      : `<input type="text" id="kf-zu" list="akteurNamesList" autocomplete="off" placeholder="Institution oder Initiative …">`}
-  </div>`;
   html += kfText('Web', 'web', a.web, {
-    placeholder: 'ohne https://',
+    placeholder: 'Adresse einfügen',
     extra: a.web ? `<a class="kf-open" href="${escapeHtml(webHref(a.web))}" target="_blank" rel="noopener">öffnen<span class="sr-only"> (neues Fenster)</span> ↗</a>` : '',
   });
-  html += `<div class="kf kf-check"><input type="checkbox" id="kf-zusammenarbeit" data-field="zusammenarbeit"${a.zusammenarbeit ? ' checked' : ''}>
-    <label for="kf-zusammenarbeit">Zusammengearbeitet (manuell, ohne eigenes Projekt)</label></div>`;
-  html += kfText('Quelle', 'quelle', a.quelle);
-  html += refListGroup('Projekte', b.veranstaltungen.map(x => refButton('veranstaltungen', x.item.id, x.item.titel || '(ohne Titel)',
-    [formatDateRange(x.item.datum, x.item.bis), x.rolle].filter(Boolean).join(' · '))));
-  html += refListGroup('Ideen', b.ideen.map(x => refButton('ideen', x.item.id, x.item.titel || '(ohne Titel)', x.warum)));
-  if (b.zugehoerige.length) html += refListGroup('Zugehörige Akteure', b.zugehoerige.map(x => refButton('akteure', x.id, x.name, x.art)));
+  html += relEditor('verbunden', 'Verbunden mit', rel.verbunden, { addLabel: 'Akteur', extraPlaceholder: 'Verbindung', extraList: 'verbindungList' });
+  html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt', extraPlaceholder: 'Rolle', extraList: 'roleList' });
+  html += relEditor('ideen', 'Ideen', rel.ideen, { addLabel: 'Idee', extraPlaceholder: 'Warum' });
   return html;
 }
 
 function wireAkteurBody(host, a) {
   const { id } = a;
-  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'akteure', id, el.dataset.field, {
-    parse: el.dataset.field === 'web' ? v => v.replace(/^https?:\/\//, '') : undefined,
-    after: el.dataset.field === 'zusammenarbeit' ? () => renderKartei({ focus: '#kf-zusammenarbeit' }) : undefined,
-  }));
+  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'akteure', id, el.dataset.field));
   const k = $('kf-kurznotiz');
   k.addEventListener('input', () => { $('kf-kurznotiz-count').textContent = `${k.value.length} / ${KURZNOTIZ_MAXLEN}`; });
-  const zu = $('kf-zu');
-  if (zu) {
-    const set = () => {
-      const v = zu.value.trim();
-      if (!v) return;
-      const zid = resolveOrCreateAkteur(v, 'Institution');
-      if (!zid || zid === id) return;
-      patch('akteure', id, { zu: zid });
-      renderKartei({ focus: '#kf-zu-clear' });
-    };
-    zu.addEventListener('change', set);
-    zu.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); set(); } });
-  }
-  const clr = $('kf-zu-clear');
-  if (clr) clr.addEventListener('click', () => { patch('akteure', id, { zu: '' }); renderKartei({ focus: '#kf-zu' }); });
+  const rel = akteurRels(a);
+
+  // Verbunden mit: auf der Seite ändern, die die Verbindung speichert
+  const otherOf = r => (r.holder === id ? r.id : id);
+  const holderList = r => (Store.get('akteure', r.holder).verbunden || []).slice();
+  wireRelEditor(host, 'verbunden', {
+    rows: rel.verbunden, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Verbindung',
+    remove: r => patch('akteure', r.holder, { verbunden: holderList(r).filter(x => x.id !== otherOf(r)) }),
+    setExtra: (r, val) => patch('akteure', r.holder, { verbunden: holderList(r).map(x => x.id === otherOf(r) ? { ...x, wie: val } : x) }),
+    add: name => {
+      const aid = resolveOrCreateAkteur(name, 'Person');
+      if (!aid || aid === id) { announce('Ein Akteur kann nicht mit sich selbst verbunden werden'); return false; }
+      ensureAkteurDatalist();
+      if (verbundeneOf(id).some(x => x.id === aid)) return aid;
+      patch('akteure', id, { verbunden: [...(Store.get('akteure', id).verbunden || []), { id: aid, wie: '' }] });
+      return aid;
+    },
+  });
+
+  // Projekte: dieser Akteur als Beteiligter
+  const bet = vid => (Store.get('veranstaltungen', vid).beteiligte || []).slice();
+  wireRelEditor(host, 'projekte', {
+    rows: rel.projekte, addLabel: 'Projekt', list: 'veranstaltungTitelList', extraPlaceholder: 'Rolle',
+    remove: r => patch('veranstaltungen', r.id, { beteiligte: bet(r.id).filter(b => b.id !== id) }),
+    setExtra: (r, val) => patch('veranstaltungen', r.id, { beteiligte: bet(r.id).map(b => b.id === id ? { ...b, rolle: val } : b) }),
+    add: name => {
+      const v = findByTitel('veranstaltungen', name);
+      if (!v) return createProjektQuiet(name, { beteiligte: [{ id, rolle: '' }] });
+      if (!bet(v.id).some(b => b.id === id)) patch('veranstaltungen', v.id, { beteiligte: [...bet(v.id), { id, rolle: '' }] });
+      return v.id;
+    },
+  });
+
+  // Ideen: dieser Akteur bei der Idee
+  const ak = iid => (Store.get('ideen', iid).akteure || []).slice();
+  wireRelEditor(host, 'ideen', {
+    rows: rel.ideen, addLabel: 'Idee', list: 'ideeTitelList', extraPlaceholder: 'Warum',
+    remove: r => patch('ideen', r.id, { akteure: ak(r.id).filter(x => x.id !== id) }),
+    setExtra: (r, val) => patch('ideen', r.id, { akteure: ak(r.id).map(x => x.id === id ? { ...x, warum: val } : x) }),
+    add: name => {
+      const i = findByTitel('ideen', name);
+      if (!i) return createIdeeQuiet(name, { akteure: [{ id, warum: '' }] });
+      if (!ak(i.id).some(x => x.id === id)) patch('ideen', i.id, { akteure: [...ak(i.id), { id, warum: '' }] });
+      return i.id;
+    },
+  });
+}
+
+function projektRels(v) {
+  return {
+    beteiligte: (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })),
+    links: (v.links || []).map((u, i) => ({ id: 'link-' + i, idx: i, href: webHref(u), label: shortUrl(u) })),
+    ideen: veranstaltungBackrefs(v.id).ideen.map(i => ({ type: 'ideen', id: i.id, label: i.titel || '(ohne Titel)' })),
+  };
 }
 
 function projektBody(v) {
-  const b = veranstaltungBackrefs(v.id);
+  const rel = projektRels(v);
   let html = '';
   html += `<div class="kf-grid">
     ${kfText('Datum', 'datum', v.datum, { type: 'date' })}
@@ -2009,45 +2252,71 @@ function projektBody(v) {
     ${kfText('Format', 'format', v.format, { list: 'formatList' })}
     ${kfText('Reihe', 'reihe', v.reihe, { list: 'reiheList' })}
   </div>`;
-  html += `<div class="kf kf-check"><input type="checkbox" id="kf-eigene" data-field="eigene"${v.eigene ? ' checked' : ''}>
-    <label for="kf-eigene">Eigenes Projekt</label></div>`;
-  html += relEditor('beteiligte', 'Beteiligte', (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })), {
-    list: 'akteurNamesList', addPlaceholder: 'Name hinzufügen …', extraKey: 'rolle', extraPlaceholder: 'Rolle', extraList: 'roleList',
-  });
+  html += relEditor('beteiligte', 'Beteiligte', rel.beteiligte, { addLabel: 'Akteur', extraPlaceholder: 'Rolle', extraList: 'roleList' });
   html += kfText('Beschrieb', 'beschrieb', v.beschrieb, { multiline: true, rows: 3 });
-  html += kfText('Quelle', 'quelle', v.quelle);
-  html += refListGroup('Ideen, die darauf verweisen', b.ideen.map(i => refButton('ideen', i.id, i.titel || '(ohne Titel)')));
+  html += relEditor('links', 'Links', rel.links, { addLabel: 'Link' });
+  html += relEditor('ideen', 'Ideen', rel.ideen, { addLabel: 'Idee' });
   return html;
 }
 
 function wireProjektBody(host, v) {
   const { id } = v;
   host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'veranstaltungen', id, el.dataset.field, {
-    after: ['datum', 'bis', 'eigene'].includes(el.dataset.field) ? () => { renderListe(); markSelectedRow(); } : undefined,
+    after: ['datum', 'bis'].includes(el.dataset.field) ? () => { renderListe(); markSelectedRow(); } : undefined,
   }));
+  const rel = projektRels(v);
   const cur = () => (Store.get('veranstaltungen', id).beteiligte || []).slice();
   wireRelEditor(host, 'beteiligte', {
-    remove: i => { const l = cur(); l.splice(i, 1); patch('veranstaltungen', id, { beteiligte: l }); },
-    setExtra: (i, val) => { const l = cur(); if (l[i]) { l[i] = { ...l[i], rolle: val }; patch('veranstaltungen', id, { beteiligte: l }); } },
-    add: (name, rolle) => {
+    rows: rel.beteiligte, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Rolle',
+    remove: r => patch('veranstaltungen', id, { beteiligte: cur().filter(b => b.id !== r.id) }),
+    setExtra: (r, val) => patch('veranstaltungen', id, { beteiligte: cur().map(b => b.id === r.id ? { ...b, rolle: val } : b) }),
+    add: name => {
       const aid = resolveOrCreateAkteur(name, 'Person');
       if (!aid) return false;
-      patch('veranstaltungen', id, { beteiligte: [...cur(), { id: aid, rolle }] });
       ensureAkteurDatalist();
+      if (!cur().some(b => b.id === aid)) patch('veranstaltungen', id, { beteiligte: [...cur(), { id: aid, rolle: '' }] });
+      return aid;
+    },
+  });
+  const links = () => (Store.get('veranstaltungen', id).links || []).slice();
+  wireRelEditor(host, 'links', {
+    rows: rel.links, addLabel: 'Link',
+    remove: r => { const l = links(); l.splice(r.idx, 1); patch('veranstaltungen', id, { links: l }); },
+    add: url => {
+      if (/\s/.test(url)) { announce('Ein Link darf keine Leerzeichen enthalten'); return false; }
+      if (!links().includes(url)) patch('veranstaltungen', id, { links: [...links(), url] });
+      return 'link';
+    },
+  });
+  const vs = iid => (Store.get('ideen', iid).veranstaltungen || []).slice();
+  wireRelEditor(host, 'ideen', {
+    rows: rel.ideen, addLabel: 'Idee', list: 'ideeTitelList',
+    remove: r => patch('ideen', r.id, { veranstaltungen: vs(r.id).filter(x => x !== id) }),
+    add: name => {
+      const i = findByTitel('ideen', name);
+      if (!i) return createIdeeQuiet(name, { veranstaltungen: [id] });
+      if (!vs(i.id).includes(id)) patch('ideen', i.id, { veranstaltungen: [...vs(i.id), id] });
+      return i.id;
     },
   });
 }
 
+function ideeRels(i) {
+  return {
+    akteure: (i.akteure || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.warum })),
+    projekte: (i.veranstaltungen || []).map(vid => {
+      const v = DATA.veranstaltungen[vid];
+      return v && !v.deleted ? { type: 'veranstaltungen', id: vid, label: v.titel || '(ohne Titel)', sub: formatDateRange(v.datum, v.bis), own: istEigen(v) } : null;
+    }).filter(Boolean),
+  };
+}
+
 function ideeBody(i) {
+  const rel = ideeRels(i);
   let html = '';
   html += kfText('Text', 'text', i.text, { multiline: true, rows: 4, placeholder: 'Von einem Satz bis zu einem Konzept' });
-  html += relEditor('akteure', 'Akteure', (i.akteure || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.warum })), {
-    list: 'akteurNamesList', addPlaceholder: 'Akteur hinzufügen …', extraKey: 'warum', extraPlaceholder: 'Warum',
-  });
-  html += relEditor('projekte', 'Projekte', (i.veranstaltungen || []).map(vid => {
-    const v = DATA.veranstaltungen[vid];
-    return v && !v.deleted ? { type: 'veranstaltungen', id: vid, label: v.titel || '(ohne Titel)' } : null;
-  }).filter(Boolean), { list: 'veranstaltungTitelList', addPlaceholder: 'Projekt hinzufügen …' });
+  html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Warum' });
+  html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt' });
   html += fieldGroupRO('Erstellt', formatDate(i.erstellt));
   return html;
 }
@@ -2059,25 +2328,29 @@ function fieldGroupRO(label, text) {
 function wireIdeeBody(host, i) {
   const { id } = i;
   host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'ideen', id, el.dataset.field));
+  const rel = ideeRels(i);
   const curA = () => (Store.get('ideen', id).akteure || []).slice();
   wireRelEditor(host, 'akteure', {
-    remove: k => { const l = curA(); l.splice(k, 1); patch('ideen', id, { akteure: l }); },
-    setExtra: (k, val) => { const l = curA(); if (l[k]) { l[k] = { ...l[k], warum: val }; patch('ideen', id, { akteure: l }); } },
-    add: (name, warum) => {
+    rows: rel.akteure, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Warum',
+    remove: r => patch('ideen', id, { akteure: curA().filter(x => x.id !== r.id) }),
+    setExtra: (r, val) => patch('ideen', id, { akteure: curA().map(x => x.id === r.id ? { ...x, warum: val } : x) }),
+    add: name => {
       const aid = resolveOrCreateAkteur(name, 'Person');
       if (!aid) return false;
-      patch('ideen', id, { akteure: [...curA(), { id: aid, warum }] });
       ensureAkteurDatalist();
+      if (!curA().some(x => x.id === aid)) patch('ideen', id, { akteure: [...curA(), { id: aid, warum: '' }] });
+      return aid;
     },
   });
   const curV = () => (Store.get('ideen', id).veranstaltungen || []).filter(vid => DATA.veranstaltungen[vid] && !DATA.veranstaltungen[vid].deleted);
   wireRelEditor(host, 'projekte', {
-    remove: k => { const l = curV(); l.splice(k, 1); patch('ideen', id, { veranstaltungen: l }); },
+    rows: rel.projekte, addLabel: 'Projekt', list: 'veranstaltungTitelList',
+    remove: r => patch('ideen', id, { veranstaltungen: curV().filter(x => x !== r.id) }),
     add: name => {
-      const v = Store.list('veranstaltungen').find(x => normalize(x.titel) === normalize(name));
-      if (!v) { announce('Kein Projekt mit diesem Titel'); host.querySelector('[data-rel="projekte"] .rel-add-name').setAttribute('aria-invalid', 'true'); return false; }
-      const l = curV();
-      if (!l.includes(v.id)) patch('ideen', id, { veranstaltungen: [...l, v.id] });
+      const v = findByTitel('veranstaltungen', name);
+      const vid = v ? v.id : createProjektQuiet(name);
+      if (!curV().includes(vid)) patch('ideen', id, { veranstaltungen: [...curV(), vid] });
+      return vid;
     },
   });
 }
@@ -2095,8 +2368,6 @@ function renderKartei(opts = {}) {
   ensureAkteurDatalist();
   ensureHilfsDatalisten();
   ensureKnotenDatalist();
-  const badges = [];
-  if (type === 'akteure' && istZusammengearbeitet(id) && !item.zusammenarbeit) badges.push('zusammengearbeitet (über eigenes Projekt)');
   const titleLabel = type === 'akteure' ? 'Name' : 'Titel';
 
   host.innerHTML = `
@@ -2106,12 +2377,11 @@ function renderKartei(opts = {}) {
         <h2 class="sr-only">Kartei: ${escapeHtml(titleOf(type, item) || 'ohne Titel')}</h2>
         <label class="sr-only" for="karteiTitle">${titleLabel}</label>
         <textarea class="kartei-title" id="karteiTitle" rows="1" placeholder="${titleLabel}" spellcheck="false">${escapeHtml(titleOf(type, item) || '')}</textarea>
-        ${badges.length ? `<div class="kartei-badges">${badges.map(b => `<span class="text-badge">${escapeHtml(b)}</span>`).join('')}</div>` : ''}
       </div>
     </div>
     <div class="kartei-body" id="karteiBody">
       <div class="field-group">
-        <div class="field-label" id="knChipsLabel">Knotenpunkte</div>
+        <span class="sr-only" id="knChipsLabel">Knotenpunkte</span>
         <div class="kn-chips" id="knChips" role="group" aria-labelledby="knChipsLabel"></div>
       </div>
       ${type === 'akteure' ? akteurBody(item) : type === 'veranstaltungen' ? projektBody(item) : ideeBody(item)}
@@ -2138,14 +2408,6 @@ function renderKartei(opts = {}) {
   });
 
   const foot = $('karteiFoot');
-  if (type === 'akteure') {
-    const ideeBtn = document.createElement('button');
-    ideeBtn.className = 'btn';
-    ideeBtn.type = 'button';
-    ideeBtn.textContent = 'Idee mit diesem Akteur';
-    ideeBtn.addEventListener('click', () => createNew('ideen', { akteure: [{ id, warum: '' }] }));
-    foot.appendChild(ideeBtn);
-  }
   const saved = document.createElement('span');
   saved.className = 'kartei-saved';
   saved.textContent = 'Änderungen werden automatisch gespeichert';
@@ -2181,45 +2443,25 @@ function renderKnotenChips(type, id, opts = {}) {
     });
     host.appendChild(chip);
   });
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'kn-add';
-  add.textContent = '+ Knotenpunkt';
-  add.addEventListener('click', () => openKnotenAddInline(type, id));
-  host.appendChild(add);
-  if (opts.openInput) openKnotenAddInline(type, id);
+  host.insertAdjacentHTML('beforeend', pillHtml('knoten', 'Knotenpunkt'));
+  const add = host.querySelector('[data-pill="knoten"]');
+  const o = {
+    label: 'Knotenpunkt', list: 'knotenNamesList',
+    commit: (raw, { viaEnter }) => {
+      const k = findKnoten(raw) || raw;
+      const th = themenOf(Store.get(type, id));
+      if (!th.includes(k)) setThemen(type, id, [...th, k]);
+      if (!DATA.themenVokabular.includes(k)) { DATA.themenVokabular.push(k); DATA.themenVokabular.sort(cmpDe); }
+      saveLocal();
+      ensureKnotenDatalist();
+      renderKnoten(); renderListe(); markSelectedRow();
+      renderKnotenChips(type, id, { openInput: viaEnter });   // mit Enter gleich den nächsten erfassen
+      announce(`${k} hinzugefügt`);
+    },
+  };
+  add.addEventListener('click', () => openPill(add, o));
+  if (opts.openInput) openPill(add, o);
   else if (opts.focusAdd) add.focus();
-}
-
-function openKnotenAddInline(type, id) {
-  const host = $('knChips');
-  const add = host.querySelector('.kn-add');
-  ensureKnotenDatalist();
-  const wrap = document.createElement('span');
-  wrap.className = 'kn-add-inline';
-  wrap.innerHTML = `<label for="knAddInput" class="sr-only">Knotenpunkt hinzufügen</label>
-    <input type="text" id="knAddInput" class="inline-input" list="knotenNamesList" autocomplete="off" placeholder="Knotenpunkt …">
-    <button type="button" class="btn" style="padding:3px 10px">Hinzufügen</button>`;
-  add.replaceWith(wrap);
-  const input = wrap.querySelector('input');
-  input.focus();
-  function commit() {
-    const raw = input.value.trim();
-    if (!raw) { renderKnotenChips(type, id, { focusAdd: true }); return; }
-    const k = findKnoten(raw) || raw;
-    const th = themenOf(Store.get(type, id));
-    if (!th.includes(k)) setThemen(type, id, [...th, k]);
-    if (!DATA.themenVokabular.includes(k)) { DATA.themenVokabular.push(k); DATA.themenVokabular.sort(cmpDe); }
-    saveLocal();
-    renderKnoten(); renderListe(); markSelectedRow();
-    renderKnotenChips(type, id, { openInput: true });   // gleich den nächsten erfassen können
-    announce(`${k} hinzugefügt`);
-  }
-  wrap.querySelector('button').addEventListener('click', commit);
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); renderKnotenChips(type, id, { focusAdd: true }); }
-  });
 }
 
 
@@ -2303,18 +2545,49 @@ function switchView(view, { focus = false } = {}) {
    - Pfeiltasten: Breite (⇧ = grössere Schritte); unter die Mindestbreite → einklappen
    ========================================================================= */
 const LAYOUT_KEY = 'feld_layout_v1';
-const LIMITS = { knoten: [160, 420], kartei: [300, 760] };
-const COLLAPSE_AT = { knoten: 100, kartei: 200 };   // rohe Zugbreite, unter der eingeklappt wird
-let layout = { knoten: 230, kartei: 420, knotenCollapsed: false, karteiCollapsed: false };
+// Mindestbreite der Knotenpunkte = Kopfzeile «Knotenpunkte A–Z ‹» knapp nebeneinander; wird gemessen (E31)
+const LIMITS = { knoten: [150, 420], kartei: [300, 760] };
+const SNAP = 16;   // so weit unter die Mindestbreite gezogen, springt die Spalte ganz zu
+let layout = { knoten: 0, kartei: 420, knotenCollapsed: false, karteiCollapsed: false, v: 2 };   // knoten 0 = Mindestbreite
 
 function loadLayout() {
-  try { Object.assign(layout, JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}')); } catch (e) {}
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || '{}');
+    Object.assign(layout, saved);
+    if (saved.v !== 2) { layout.knoten = 0; layout.v = 2; }   // einmalig: Standard ist neu die Mindestbreite
+  } catch (e) {}
+}
+
+// Natürliche Breite der Kopfzeile der Knotenpunkte (alle Kinder schrumpfen dort nicht)
+function measureKnotenMin() {
+  const head = document.querySelector('#colKnoten .col-head');
+  if (!head || !head.offsetParent || window.matchMedia('(max-width: 860px)').matches) return 0;
+  const cs = getComputedStyle(head);
+  const kids = Array.from(head.children).filter(el => {
+    const c = getComputedStyle(el);
+    return c.display !== 'none' && c.position !== 'absolute';
+  });
+  const gap = parseFloat(cs.columnGap) || 0;
+  // margin-right:auto am Titel zählt nicht (füllt nur den freien Raum)
+  const w = kids.reduce((sum, el) => sum + el.getBoundingClientRect().width, 0)
+    + gap * Math.max(0, kids.length - 1) + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  return Math.ceil(w);
+}
+
+function updateKnotenMin() {
+  if (layout.knotenCollapsed) return;
+  const m = measureKnotenMin();
+  if (m > 0) LIMITS.knoten[0] = m;
 }
 function saveLayout() { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch (e) {} }
 
 function applyLayout() {
   const root = document.documentElement.style;
-  root.setProperty('--w-knoten', layout.knoten + 'px');
+  // erst mit Mindestbreite messen, dann die gewünschte Breite darauf klemmen
+  $('colKnoten').classList.toggle('collapsed', layout.knotenCollapsed);
+  updateKnotenMin();
+  const wKnoten = Math.max(LIMITS.knoten[0], layout.knoten || 0);
+  root.setProperty('--w-knoten', wKnoten + 'px');
   root.setProperty('--w-kartei', layout.kartei + 'px');
   [['knoten', 'Knoten'], ['kartei', 'Kartei']].forEach(([key, Cap]) => {
     const collapsed = layout[key + 'Collapsed'];
@@ -2325,8 +2598,9 @@ function applyLayout() {
     sep.classList.toggle('is-collapsed', collapsed);
     sep.setAttribute('aria-valuemin', 0);
     sep.setAttribute('aria-valuemax', LIMITS[key][1]);
-    sep.setAttribute('aria-valuenow', collapsed ? 0 : layout[key]);
-    sep.setAttribute('aria-valuetext', collapsed ? 'eingeklappt' : `${layout[key]} Pixel`);
+    const w = key === 'knoten' ? wKnoten : layout[key];
+    sep.setAttribute('aria-valuenow', collapsed ? 0 : w);
+    sep.setAttribute('aria-valuetext', collapsed ? 'eingeklappt' : `${w} Pixel`);
   });
 }
 
@@ -2338,8 +2612,14 @@ function setCollapsed(key, collapsed) {
   saveLayout();
 }
 
+// Knotenpunkte: liegt die Breite auf dem Minimum, wird 0 gespeichert (= folgt der gemessenen Mindestbreite)
+function storeW(key, w) {
+  const c = clampW(key, w);
+  return key === 'knoten' && c <= LIMITS.knoten[0] ? 0 : c;
+}
+
 function setWidth(key, w) {
-  layout[key] = clampW(key, w);
+  layout[key] = storeW(key, w);
   layout[key + 'Collapsed'] = false;
   applyLayout();
   saveLayout();
@@ -2355,13 +2635,13 @@ function wireLayout() {
       sep.classList.add('dragging');
       document.body.classList.add('is-resizing');
       const startX = e.clientX;
-      const startW = layout[key + 'Collapsed'] ? 40 : layout[key];
+      const startW = layout[key + 'Collapsed'] ? 40 : Math.max(LIMITS[key][0], layout[key]);
       const move = ev => {
         const raw = startW + dir * (ev.clientX - startX);
-        if (raw < COLLAPSE_AT[key]) {
+        if (raw < LIMITS[key][0] - SNAP) {
           if (!layout[key + 'Collapsed']) { layout[key + 'Collapsed'] = true; applyLayout(); }
         } else {
-          layout[key] = clampW(key, raw);
+          layout[key] = storeW(key, raw);
           layout[key + 'Collapsed'] = false;
           applyLayout();
         }
@@ -2385,10 +2665,10 @@ function wireLayout() {
       const grow = (e.key === 'ArrowRight' && dir > 0) || (e.key === 'ArrowLeft' && dir < 0);
       const shrink = (e.key === 'ArrowLeft' && dir > 0) || (e.key === 'ArrowRight' && dir < 0);
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed(key, !collapsed); return; }
-      if (grow) { e.preventDefault(); collapsed ? setWidth(key, LIMITS[key][0]) : setWidth(key, layout[key] + step); }
+      if (grow) { e.preventDefault(); collapsed ? setWidth(key, LIMITS[key][0]) : setWidth(key, Math.max(LIMITS[key][0], layout[key]) + step); }
       if (shrink && !collapsed) {
         e.preventDefault();
-        if (layout[key] <= LIMITS[key][0]) setCollapsed(key, true);
+        if (Math.max(LIMITS[key][0], layout[key]) <= LIMITS[key][0]) setCollapsed(key, true);
         else setWidth(key, layout[key] - step);
       }
       if (e.key === 'Home') { e.preventDefault(); setCollapsed(key, true); }
@@ -2424,6 +2704,7 @@ function ensureAkteurDatalist() {
 }
 
 const ROLLEN_VORSCHLAEGE = ['veranstaltend', 'Leitung', 'Moderation', 'Ort', 'Förderung', 'Kooperation'];
+const VERBINDUNG_VORSCHLAEGE = ['trägt', 'Mitglied', 'Leitung'];   // bewusst knapp (E35)
 
 function ensureHilfsDatalisten() {
   const roles = new Set(ROLLEN_VORSCHLAEGE);
@@ -2435,9 +2716,13 @@ function ensureHilfsDatalisten() {
     if (v.reihe) reihen.add(v.reihe);
   });
   ensureDatalist('roleList', Array.from(roles));
+  const verb = new Set(VERBINDUNG_VORSCHLAEGE);
+  Store.list('akteure').forEach(a => (a.verbunden || []).forEach(x => { if (x.wie) verb.add(x.wie); }));
+  ensureDatalist('verbindungList', Array.from(verb));
   ensureDatalist('formatList', Array.from(formate).sort((a, b) => a.localeCompare(b, 'de')));
   ensureDatalist('reiheList', Array.from(reihen).sort((a, b) => a.localeCompare(b, 'de')));
   ensureDatalist('veranstaltungTitelList', Store.list('veranstaltungen').map(v => v.titel).sort((a, b) => a.localeCompare(b, 'de')));
+  ensureDatalist('ideeTitelList', Store.list('ideen').map(i => i.titel).filter(Boolean).sort((a, b) => a.localeCompare(b, 'de')));
 }
 
 /* =========================================================================
@@ -2522,7 +2807,9 @@ function mergeIncomingPayload(payload) {
   if (Array.isArray(payload.themenVokabular)) {
     payload.themenVokabular.forEach(t => { if (t && !DATA.themenVokabular.includes(t)) DATA.themenVokabular.push(t); });
   }
+  if (payload.ich && !ichId()) DATA.ich = payload.ich;
   migrateOrdnerZuKnoten();
+  migrateE28();
   return stats;
 }
 
@@ -2531,6 +2818,7 @@ function currentPayload() {
     version: 1,
     updated: nowISO(),
     themenVokabular: DATA.themenVokabular,
+    ich: DATA.ich || '',
     akteure: DATA.akteure,
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
@@ -2609,21 +2897,23 @@ function downloadTemplate() {
       'akteure/veranstaltungen/ideen sind Objekte, Schlüssel = frei wählbare ID. ' +
       'Beim Import gewinnt pro ID der neuere Eintrag (anhand "modified"), neue IDs werden ergänzt.',
     themenVokabular: THEMEN_KERN,
+    ich: 'ID des Akteurs, der du selbst bist (bestimmt «eigen» und «zusammengearbeitet»)',
     akteure: {
       'beispiel-id': {
         name: 'Pflichtfeld: Name der Person/Initiative/Institution',
         art: 'Person | Initiative | Institution',
-        zu: 'ID eines anderen Akteurs, oder leer',
+        verbunden: [{ id: 'akteur-id', wie: 'z. B. Mitglied; die Verbindung gilt in beide Richtungen' }],
         ort: '', themen: ['Knotenpunkt'], web: '',
         kurznotiz: `«Aufgenommen, weil», max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint in der Liste`, notiz: '',
-        zusammenarbeit: false, quelle: '', modified: 'ISO-Zeitstempel, optional',
+        quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
     veranstaltungen: {
       'beispiel-id': {
         titel: 'Pflichtfeld', datum: 'YYYY-MM-DD, optional', bis: '', zeit: '', ort: '',
-        format: '', reihe: '', eigene: false, themen: ['Knotenpunkt'],
+        format: '', reihe: '', themen: ['Knotenpunkt'],
         beteiligte: [{ id: 'akteur-id', rolle: 'veranstaltend' }],
+        links: ['https://…'],
         beschrieb: '', quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
@@ -2705,18 +2995,12 @@ function wireSearch() {
 
 function wireListe() {
   $('btnPlus').addEventListener('click', () => createNew(TAB_TYPE[currentView]));
-  $('listSort').addEventListener('change', () => {
-    listSort[currentView] = $('listSort').value;
-    try { localStorage.setItem(SORT_KEY, JSON.stringify(listSort)); } catch (e) {}
-    renderListe();
-    if (currentView === 'agenda' && listSort.agenda === 'chrono') scrollToTodayLine();
-  });
-  $('knotenSort').value = knotenSort;
-  $('knotenSort').addEventListener('change', () => {
-    knotenSort = $('knotenSort').value;
+  setupMenuSelect('knotenSort', [['az', 'A–Z'], ['haeufigkeit', 'Häufigkeit']], knotenSort, v => {
+    knotenSort = v;
     try { localStorage.setItem(KNOTEN_SORT_KEY, knotenSort); } catch (e) {}
     renderKnoten();
-  });
+    applyLayout();   // Mindestbreite hängt von der Breite des Auswahlknopfs ab
+  }, 'Knotenpunkte sortieren');
   // Pfeiltasten in der Liste: nächster/vorheriger Eintrag, Auswahl folgt dem Fokus
   $('entryList').addEventListener('keydown', e => {
     if (!e.target.classList.contains('entry')) return;
@@ -2754,11 +3038,27 @@ function wireSettings() {
       $('cfg-path').value = syncConfig.path || '';
       $('cfg-token').value = syncConfig.token || '';
     }
+    ensureAkteurDatalist();
+    $('cfg-ich').value = ichId() ? akteurName(ichId()) : '';
+    $('ichStatus').textContent = ichId() ? '' : 'Noch kein Akteur festgelegt.';
+    $('ichStatus').className = 'settings-status';
     $('syncSettingsStatus').textContent = syncConfig ? '' : 'Noch nicht verbunden.';
     $('syncSettingsStatus').className = 'settings-status';
     if (!$('settingsDialog').open) $('settingsDialog').showModal();
   });
   $('settingsClose').addEventListener('click', () => $('settingsDialog').close());
+  $('cfg-ich').addEventListener('change', () => {
+    const v = $('cfg-ich').value.trim();
+    const st = $('ichStatus');
+    const a = v && Store.list('akteure').find(x => normalize(x.name) === normalize(v));
+    if (!a) { st.className = 'settings-status err'; st.textContent = v ? 'Kein Akteur mit diesem Namen.' : 'Noch kein Akteur festgelegt.'; return; }
+    DATA.ich = a.id;
+    migrateE28();
+    saveLocal();
+    renderAll();
+    st.className = 'settings-status ok';
+    st.textContent = `Gespeichert: ${a.name}.`;
+  });
 
   $('btnSync').addEventListener('click', () => {
     if (!syncConfig) { $('btnSettings').click(); return; }
@@ -2857,10 +3157,13 @@ function init() {
   wireSettings();
   wireKeyboard();
   applyLayout();
+  window.addEventListener('resize', debounce(applyLayout, 150));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyLayout);   // Public Sans verändert die Kopfzeilenbreite
 
   const savedTab = localStorage.getItem(TAB_KEY);
   if (savedTab && TAB_TYPE[savedTab]) currentView = savedTab;
   migrateOrdnerZuKnoten();
+  migrateE28();
   ensureVokabular();
   ensureKnotenDatalist();
   switchView(currentView);
