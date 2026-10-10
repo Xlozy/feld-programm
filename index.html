@@ -931,20 +931,26 @@ function istZusammengearbeitet(akteurId) {
     (v.beteiligte || []).some(b => b.id === akteurId) && (v.beteiligte || []).some(b => b.id === ich));
 }
 
-// Verbindungen zwischen Akteuren (E30, ersetzt «Gehört zu»): gespeichert auf einer
-// Seite (`verbunden: [{id, wie}]`), angezeigt und bearbeitbar auf beiden.
-function verbundeneOf(id) {
+// Verbindungen innerhalb desselben Bereichs: Akteur↔Akteur (E30, ersetzt «Gehört zu»),
+// Projekt↔Projekt und Idee↔Idee (E36). Gespeichert auf einer Seite (`verbunden: [{id, wie}]`),
+// angezeigt und bearbeitbar auf beiden.
+function entryLabel(type, id) {
+  const o = DATA[type] && DATA[type][id];
+  return o && !o.deleted ? (titleOf(type, o) || '(ohne Titel)') : null;
+}
+
+function verbundeneOf(id, type = 'akteure') {
   const out = [];
-  const self = DATA.akteure[id];
+  const self = DATA[type][id];
   (self && !self.deleted ? self.verbunden || [] : []).forEach(x => {
-    if (akteurName(x.id) && !out.some(o => o.id === x.id)) out.push({ id: x.id, wie: x.wie || '', holder: id });
+    if (x.id !== id && entryLabel(type, x.id) && !out.some(o => o.id === x.id)) out.push({ id: x.id, wie: x.wie || '', holder: id });
   });
-  Store.list('akteure').forEach(a => {
+  Store.list(type).forEach(a => {
     if (a.id === id) return;
     const x = (a.verbunden || []).find(v => v.id === id);
     if (x && !out.some(o => o.id === a.id)) out.push({ id: a.id, wie: x.wie || '', holder: a.id });
   });
-  return out.sort((a, b) => cmpDe(akteurName(a.id), akteurName(b.id)));
+  return out.sort((a, b) => cmpDe(entryLabel(type, a.id), entryLabel(type, b.id)));
 }
 
 function veranstaltungStatus(v) {
@@ -995,7 +1001,11 @@ function referencingFor(type, id) {
   }
   if (type === 'veranstaltungen') {
     const b = veranstaltungBackrefs(id);
-    return b.ideen.map(x => `Idee „${x.titel}"`);
+    return [...b.ideen.map(x => `Idee „${x.titel}"`),
+      ...verbundeneOf(id, 'veranstaltungen').map(x => `Projekt „${entryLabel('veranstaltungen', x.id)}" (verbunden)`)];
+  }
+  if (type === 'ideen') {
+    return verbundeneOf(id, 'ideen').map(x => `Idee „${entryLabel('ideen', x.id)}" (verbunden)`);
   }
   if (type === 'ideenOrdner') {
     return Store.list('ideen').filter(i => i.ordner === id).map(i => `Idee „${i.titel}"`);
@@ -1027,6 +1037,13 @@ function stripReferencesTo(type, id) {
       if (i.deleted || !(i.veranstaltungen || []).includes(id)) return;
       i.veranstaltungen = i.veranstaltungen.filter(x => x !== id);
       i.modified = nowISO();
+    });
+  }
+  if (type === 'veranstaltungen' || type === 'ideen') {
+    Object.values(DATA[type]).forEach(o => {
+      if (o.deleted || !(o.verbunden || []).some(x => x.id === id)) return;
+      o.verbunden = o.verbunden.filter(x => x.id !== id);
+      o.modified = nowISO();
     });
   }
   if (type === 'ideenOrdner') {
@@ -1066,12 +1083,12 @@ function haystackFor(type, item) {
   }
   if (type === 'veranstaltungen') {
     const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
-    return [item.titel, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...(item.links || []), ...beteiligteNamen];
+    return [item.titel, item.kurznotiz, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...(item.links || []), ...beteiligteNamen];
   }
   if (type === 'ideen') {
     const namen = (item.akteure || []).map(a => akteurName(a.id));
     const warums = (item.akteure || []).map(a => a.warum);
-    return [item.titel, item.text, (item.themen || []).join(' '), ...namen, ...warums];
+    return [item.titel, item.kurznotiz, item.text, (item.themen || []).join(' '), ...namen, ...warums];
   }
   return [];
 }
@@ -1716,10 +1733,13 @@ function entryRow(type, item) {
     if (istEigen(item)) { marker = '◆'; markerSr = 'eigenes Projekt'; }
     const meta = [formatDateRange(item.datum, item.bis), item.format, item.ort].filter(Boolean).join(' · ');
     if (meta) lines += `<span class="entry-meta">${escapeHtml(meta)}</span>`;
-    const bet = wichtigsteBeteiligte(item);
+    // Kurznotiz hat Vorrang (E37), sonst die wichtigsten Beteiligten
+    const bet = item.kurznotiz || wichtigsteBeteiligte(item);
     if (bet) lines += `<span class="entry-why">${escapeHtml(bet)}</span>`;
   } else {
-    if (item.text) lines += `<span class="entry-why">${escapeHtml(item.text)}</span>`;
+    // Kurznotiz hat Vorrang (E37), sonst der Anfang der Informationen
+    const why = item.kurznotiz || item.text;
+    if (why) lines += `<span class="entry-why">${escapeHtml(why)}</span>`;
     lines += `<span class="entry-meta">${escapeHtml(formatDate(item.erstellt))}</span>`;
   }
 
@@ -2145,11 +2165,60 @@ function createIdeeQuiet(titel, fields = {}) {
   return id;
 }
 
-/* ---------- Karteikarten je Typ ---------- */
+/* ---------- Karteikarten je Typ ----------
+   Einheitliches Schema (E36): [Eckdaten] · Kurznotiz · Informationen · [Links] · Knotenpunkte ·
+   Akteure · Projekte · Ideen. Beziehungen im eigenen Bereich sind gegenseitige Verknüpfungen. */
+function kurznotizField(item, placeholder) {
+  return kfText('Kurznotiz', 'kurznotiz', item.kurznotiz, {
+    maxlength: KURZNOTIZ_MAXLEN, placeholder,
+    describedby: 'kf-kurznotiz-count',
+    extra: `<span class="kf-count" id="kf-kurznotiz-count">${(item.kurznotiz || '').length} / ${KURZNOTIZ_MAXLEN}</span>`,
+  });
+}
+
+function knotenGroup() {
+  return `<div class="field-group">
+    <div class="field-label" id="knChipsLabel">Knotenpunkte</div>
+    <div class="kn-chips" id="knChips" role="group" aria-labelledby="knChipsLabel"></div>
+  </div>`;
+}
+
+// Gegenseitige Verknüpfungen im selben Bereich
+function sameTypeRows(type, id) {
+  return verbundeneOf(id, type).map(x => {
+    const o = Store.get(type, x.id);
+    const proj = type === 'veranstaltungen';
+    return { type, id: x.id, label: entryLabel(type, x.id), extra: x.wie, holder: x.holder,
+      sub: proj ? formatDateRange(o.datum, o.bis) : '', own: proj && istEigen(o) };
+  });
+}
+
+function wireSameType(host, key, type, id, rows, o) {
+  const otherOf = r => (r.holder === id ? r.id : id);
+  const list = r => (Store.get(type, r.holder).verbunden || []).slice();
+  wireRelEditor(host, key, {
+    rows, addLabel: o.addLabel, list: o.list, extraPlaceholder: o.extraPlaceholder,
+    remove: r => patch(type, r.holder, { verbunden: list(r).filter(x => x.id !== otherOf(r)) }),
+    setExtra: (r, val) => patch(type, r.holder, { verbunden: list(r).map(x => x.id === otherOf(r) ? { ...x, wie: val } : x) }),
+    add: name => {
+      const oid = o.resolve(name);
+      if (!oid || oid === id) { announce('Ein Eintrag kann nicht mit sich selbst verknüpft werden'); return false; }
+      if (verbundeneOf(id, type).some(x => x.id === oid)) return oid;
+      patch(type, id, { verbunden: [...(Store.get(type, id).verbunden || []), { id: oid, wie: '' }] });
+      return oid;
+    },
+  });
+}
+
+const resolveProjekt = name => { const v = findByTitel('veranstaltungen', name); return v ? v.id : createProjektQuiet(name); };
+const resolveIdee = name => { const i = findByTitel('ideen', name); return i ? i.id : createIdeeQuiet(name); };
+const resolveAkteur = name => { const aid = resolveOrCreateAkteur(name, 'Person'); ensureAkteurDatalist(); return aid; };
+
+/* Akteur */
 function akteurRels(a) {
   const b = akteurBackrefs(a.id);
   return {
-    verbunden: b.verbunden.map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id), extra: x.wie, holder: x.holder })),
+    akteure: sameTypeRows('akteure', a.id),
     projekte: b.veranstaltungen.map(x => ({ type: 'veranstaltungen', id: x.item.id, label: x.item.titel || '(ohne Titel)',
       sub: formatDateRange(x.item.datum, x.item.bis), extra: x.rolle, own: istEigen(x.item) })),
     ideen: b.ideen.map(x => ({ type: 'ideen', id: x.item.id, label: x.item.titel || '(ohne Titel)', extra: x.warum })),
@@ -2159,11 +2228,7 @@ function akteurRels(a) {
 function akteurBody(a) {
   const rel = akteurRels(a);
   let html = '';
-  html += kfText('Aufgenommen, weil', 'kurznotiz', a.kurznotiz, {
-    maxlength: KURZNOTIZ_MAXLEN, placeholder: 'Kurz: warum im Verzeichnis – erscheint in der Liste',
-    describedby: 'kf-kurznotiz-count',
-    extra: `<span class="kf-count" id="kf-kurznotiz-count">${(a.kurznotiz || '').length} / ${KURZNOTIZ_MAXLEN}</span>`,
-  });
+  html += kurznotizField(a, 'Kurz: warum im Verzeichnis – erscheint in der Liste');
   html += kfText('Informationen', 'notiz', a.notiz, { multiline: true, rows: 3, placeholder: 'Weitere Informationen, ohne Längenbegrenzung' });
   html += `<div class="kf-grid">
     <div class="kf"><label class="field-label" for="kf-art">Art</label>
@@ -2174,7 +2239,8 @@ function akteurBody(a) {
     placeholder: 'Adresse einfügen',
     extra: a.web ? `<a class="kf-open" href="${escapeHtml(webHref(a.web))}" target="_blank" rel="noopener">öffnen<span class="sr-only"> (neues Fenster)</span> ↗</a>` : '',
   });
-  html += relEditor('verbunden', 'Verbunden mit', rel.verbunden, { addLabel: 'Akteur', extraPlaceholder: 'Verbindung', extraList: 'verbindungList' });
+  html += knotenGroup();
+  html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Verbindung', extraList: 'verbindungList' });
   html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt', extraPlaceholder: 'Rolle', extraList: 'roleList' });
   html += relEditor('ideen', 'Ideen', rel.ideen, { addLabel: 'Idee', extraPlaceholder: 'Warum' });
   return html;
@@ -2183,26 +2249,10 @@ function akteurBody(a) {
 function wireAkteurBody(host, a) {
   const { id } = a;
   host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'akteure', id, el.dataset.field));
-  const k = $('kf-kurznotiz');
-  k.addEventListener('input', () => { $('kf-kurznotiz-count').textContent = `${k.value.length} / ${KURZNOTIZ_MAXLEN}`; });
   const rel = akteurRels(a);
 
-  // Verbunden mit: auf der Seite ändern, die die Verbindung speichert
-  const otherOf = r => (r.holder === id ? r.id : id);
-  const holderList = r => (Store.get('akteure', r.holder).verbunden || []).slice();
-  wireRelEditor(host, 'verbunden', {
-    rows: rel.verbunden, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Verbindung',
-    remove: r => patch('akteure', r.holder, { verbunden: holderList(r).filter(x => x.id !== otherOf(r)) }),
-    setExtra: (r, val) => patch('akteure', r.holder, { verbunden: holderList(r).map(x => x.id === otherOf(r) ? { ...x, wie: val } : x) }),
-    add: name => {
-      const aid = resolveOrCreateAkteur(name, 'Person');
-      if (!aid || aid === id) { announce('Ein Akteur kann nicht mit sich selbst verbunden werden'); return false; }
-      ensureAkteurDatalist();
-      if (verbundeneOf(id).some(x => x.id === aid)) return aid;
-      patch('akteure', id, { verbunden: [...(Store.get('akteure', id).verbunden || []), { id: aid, wie: '' }] });
-      return aid;
-    },
-  });
+  wireSameType(host, 'akteure', 'akteure', id, rel.akteure,
+    { addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Verbindung', resolve: resolveAkteur });
 
   // Projekte: dieser Akteur als Beteiligter
   const bet = vid => (Store.get('veranstaltungen', vid).beteiligte || []).slice();
@@ -2233,10 +2283,12 @@ function wireAkteurBody(host, a) {
   });
 }
 
+/* Projekt */
 function projektRels(v) {
   return {
-    beteiligte: (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })),
+    akteure: (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })),
     links: (v.links || []).map((u, i) => ({ id: 'link-' + i, idx: i, href: webHref(u), label: shortUrl(u) })),
+    projekte: sameTypeRows('veranstaltungen', v.id),
     ideen: veranstaltungBackrefs(v.id).ideen.map(i => ({ type: 'ideen', id: i.id, label: i.titel || '(ohne Titel)' })),
   };
 }
@@ -2252,9 +2304,12 @@ function projektBody(v) {
     ${kfText('Format', 'format', v.format, { list: 'formatList' })}
     ${kfText('Reihe', 'reihe', v.reihe, { list: 'reiheList' })}
   </div>`;
-  html += relEditor('beteiligte', 'Beteiligte', rel.beteiligte, { addLabel: 'Akteur', extraPlaceholder: 'Rolle', extraList: 'roleList' });
-  html += kfText('Beschrieb', 'beschrieb', v.beschrieb, { multiline: true, rows: 3 });
+  html += kurznotizField(v, 'Kurz, höchstens 100 Zeichen');
+  html += kfText('Informationen', 'beschrieb', v.beschrieb, { multiline: true, rows: 3, placeholder: 'Weitere Informationen, ohne Längenbegrenzung' });
   html += relEditor('links', 'Links', rel.links, { addLabel: 'Link' });
+  html += knotenGroup();
+  html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Rolle', extraList: 'roleList' });
+  html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt' });
   html += relEditor('ideen', 'Ideen', rel.ideen, { addLabel: 'Idee' });
   return html;
 }
@@ -2266,14 +2321,13 @@ function wireProjektBody(host, v) {
   }));
   const rel = projektRels(v);
   const cur = () => (Store.get('veranstaltungen', id).beteiligte || []).slice();
-  wireRelEditor(host, 'beteiligte', {
-    rows: rel.beteiligte, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Rolle',
+  wireRelEditor(host, 'akteure', {
+    rows: rel.akteure, addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Rolle',
     remove: r => patch('veranstaltungen', id, { beteiligte: cur().filter(b => b.id !== r.id) }),
     setExtra: (r, val) => patch('veranstaltungen', id, { beteiligte: cur().map(b => b.id === r.id ? { ...b, rolle: val } : b) }),
     add: name => {
-      const aid = resolveOrCreateAkteur(name, 'Person');
+      const aid = resolveAkteur(name);
       if (!aid) return false;
-      ensureAkteurDatalist();
       if (!cur().some(b => b.id === aid)) patch('veranstaltungen', id, { beteiligte: [...cur(), { id: aid, rolle: '' }] });
       return aid;
     },
@@ -2288,6 +2342,8 @@ function wireProjektBody(host, v) {
       return 'link';
     },
   });
+  wireSameType(host, 'projekte', 'veranstaltungen', id, rel.projekte,
+    { addLabel: 'Projekt', list: 'veranstaltungTitelList', resolve: resolveProjekt });
   const vs = iid => (Store.get('ideen', iid).veranstaltungen || []).slice();
   wireRelEditor(host, 'ideen', {
     rows: rel.ideen, addLabel: 'Idee', list: 'ideeTitelList',
@@ -2301,6 +2357,7 @@ function wireProjektBody(host, v) {
   });
 }
 
+/* Idee */
 function ideeRels(i) {
   return {
     akteure: (i.akteure || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.warum })),
@@ -2308,21 +2365,20 @@ function ideeRels(i) {
       const v = DATA.veranstaltungen[vid];
       return v && !v.deleted ? { type: 'veranstaltungen', id: vid, label: v.titel || '(ohne Titel)', sub: formatDateRange(v.datum, v.bis), own: istEigen(v) } : null;
     }).filter(Boolean),
+    ideen: sameTypeRows('ideen', i.id),
   };
 }
 
 function ideeBody(i) {
   const rel = ideeRels(i);
   let html = '';
-  html += kfText('Text', 'text', i.text, { multiline: true, rows: 4, placeholder: 'Von einem Satz bis zu einem Konzept' });
+  html += kurznotizField(i, 'Kurz, höchstens 100 Zeichen');
+  html += kfText('Informationen', 'text', i.text, { multiline: true, rows: 4, placeholder: 'Von einem Satz bis zu einem Konzept' });
+  html += knotenGroup();
   html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Warum' });
   html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt' });
-  html += fieldGroupRO('Erstellt', formatDate(i.erstellt));
+  html += relEditor('ideen', 'Ideen', rel.ideen, { addLabel: 'Idee' });
   return html;
-}
-
-function fieldGroupRO(label, text) {
-  return `<div class="field-group"><div class="field-label">${escapeHtml(label)}</div><div class="field-value">${escapeHtml(text || '–')}</div></div>`;
 }
 
 function wireIdeeBody(host, i) {
@@ -2335,9 +2391,8 @@ function wireIdeeBody(host, i) {
     remove: r => patch('ideen', id, { akteure: curA().filter(x => x.id !== r.id) }),
     setExtra: (r, val) => patch('ideen', id, { akteure: curA().map(x => x.id === r.id ? { ...x, warum: val } : x) }),
     add: name => {
-      const aid = resolveOrCreateAkteur(name, 'Person');
+      const aid = resolveAkteur(name);
       if (!aid) return false;
-      ensureAkteurDatalist();
       if (!curA().some(x => x.id === aid)) patch('ideen', id, { akteure: [...curA(), { id: aid, warum: '' }] });
       return aid;
     },
@@ -2347,12 +2402,13 @@ function wireIdeeBody(host, i) {
     rows: rel.projekte, addLabel: 'Projekt', list: 'veranstaltungTitelList',
     remove: r => patch('ideen', id, { veranstaltungen: curV().filter(x => x !== r.id) }),
     add: name => {
-      const v = findByTitel('veranstaltungen', name);
-      const vid = v ? v.id : createProjektQuiet(name);
+      const vid = resolveProjekt(name);
       if (!curV().includes(vid)) patch('ideen', id, { veranstaltungen: [...curV(), vid] });
       return vid;
     },
   });
+  wireSameType(host, 'ideen', 'ideen', id, rel.ideen,
+    { addLabel: 'Idee', list: 'ideeTitelList', resolve: resolveIdee });
 }
 
 /* ---------- Rendern ---------- */
@@ -2380,10 +2436,6 @@ function renderKartei(opts = {}) {
       </div>
     </div>
     <div class="kartei-body" id="karteiBody">
-      <div class="field-group">
-        <span class="sr-only" id="knChipsLabel">Knotenpunkte</span>
-        <div class="kn-chips" id="knChips" role="group" aria-labelledby="knChipsLabel"></div>
-      </div>
       ${type === 'akteure' ? akteurBody(item) : type === 'veranstaltungen' ? projektBody(item) : ideeBody(item)}
     </div>
     <div class="kartei-foot dialog-foot" id="karteiFoot"></div>`;
@@ -2400,6 +2452,8 @@ function renderKartei(opts = {}) {
   else if (type === 'veranstaltungen') wireProjektBody(body, item);
   else wireIdeeBody(body, item);
   body.querySelectorAll('textarea').forEach(autosize);
+  const kn = $('kf-kurznotiz');
+  if (kn) kn.addEventListener('input', () => { $('kf-kurznotiz-count').textContent = `${kn.value.length} / ${KURZNOTIZ_MAXLEN}`; });
 
   renderKnotenChips(type, id);
 
@@ -2904,7 +2958,7 @@ function downloadTemplate() {
         art: 'Person | Initiative | Institution',
         verbunden: [{ id: 'akteur-id', wie: 'z. B. Mitglied; die Verbindung gilt in beide Richtungen' }],
         ort: '', themen: ['Knotenpunkt'], web: '',
-        kurznotiz: `«Aufgenommen, weil», max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint in der Liste`, notiz: '',
+        kurznotiz: `Kurznotiz, max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint in der Liste`, notiz: 'Informationen',
         quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
@@ -2914,12 +2968,14 @@ function downloadTemplate() {
         format: '', reihe: '', themen: ['Knotenpunkt'],
         beteiligte: [{ id: 'akteur-id', rolle: 'veranstaltend' }],
         links: ['https://…'],
-        beschrieb: '', quelle: '', modified: 'ISO-Zeitstempel, optional',
+        kurznotiz: `max. ${KURZNOTIZ_MAXLEN} Zeichen`, beschrieb: 'Informationen',
+        verbunden: [{ id: 'projekt-id' }], quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
     ideen: {
       'beispiel-id': {
-        titel: 'Pflichtfeld', text: '', themen: ['Knotenpunkt'],
+        titel: 'Pflichtfeld', kurznotiz: `max. ${KURZNOTIZ_MAXLEN} Zeichen`, text: 'Informationen', themen: ['Knotenpunkt'],
+        verbunden: [{ id: 'idee-id' }],
         akteure: [{ id: 'akteur-id', warum: '' }],
         veranstaltungen: ['veranstaltung-id'],
         reihenfolge: 'Zahl, für manuelle Sortierung, optional',
