@@ -116,6 +116,7 @@ button { cursor: pointer; }
 }
 .icon-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; }
 .icon-btn:hover { background: var(--sel); color: var(--text); }
+.icon-btn[aria-expanded="true"] { background: var(--sel); color: var(--text); }   /* Stift bei offenem Notizpanel */
 .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .sync-dot.idle { background: #4ade80; }
 .sync-dot.syncing { background: var(--warn); }
@@ -480,6 +481,54 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 .settings-status.err { color: var(--danger); }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* ---------- Notizen zur App (E38) ---------- */
+.notiz-panel {
+  position: fixed; z-index: 45; top: 60px; right: 16px;
+  width: min(390px, calc(100vw - 32px));
+  background: var(--raised); border: 1px solid var(--line-3); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3);
+  padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.notiz-head { display: flex; align-items: center; gap: 8px; }
+.notiz-head h2 { flex: 1; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.notiz-ort { font-size: 13px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
+.notiz-ort-path { flex-basis: 100%; overflow-wrap: anywhere; }
+.notiz-ort .btn-link { font-size: 12.5px; }
+.notiz-arten { display: flex; gap: 6px; flex-wrap: wrap; }
+.notiz-panel textarea {
+  width: 100%; min-height: 88px; resize: vertical;
+  background: var(--bg); border: 1px solid var(--line-2); border-radius: 7px;
+  padding: 8px 10px; color: var(--text); line-height: 1.45;
+}
+.notiz-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notiz-kbd { font-size: 12px; color: var(--muted); }
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 70; max-width: calc(100vw - 32px);
+  background: #2a2f36; border: 1px solid #3d444e; border-radius: 8px; color: var(--text);
+  padding: 8px 14px; font-size: 13.5px; box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+}
+#notizenDialog { width: min(720px, calc(100vw - 32px)); }
+.nz-group h3 {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted);
+  padding: 16px 0 6px; border-bottom: 1px solid var(--line-2);
+}
+.nz-group:first-child h3 { padding-top: 0; }
+.nz-list { list-style: none; }
+.nz-item { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 0; border-bottom: 1px solid var(--line-2); }
+.nz-main { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nz-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.nz-art { font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-2); border: 1px solid var(--line-3); border-radius: 5px; padding: 0 6px; }
+.nz-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.nz-item.is-done .nz-text { color: var(--muted); text-decoration: line-through; }
+.nz-ort { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.nz-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; align-self: flex-start; }
+.nz-actions .btn { padding: 4px 10px; font-size: 12.5px; }
+.nz-done { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); margin-right: 4px; cursor: pointer; }
+.nz-done input { accent-color: var(--accent); width: 16px; height: 16px; }
+.nz-empty { color: var(--muted); padding: 24px 0; text-align: center; }
+.nz-filter { display: flex; gap: 6px; align-items: center; }
+
 /* ---------- Schmale Bildschirme ---------- */
 @media (max-width: 860px) {
   .topbar { gap: 10px; flex-wrap: wrap; }
@@ -498,12 +547,13 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
   }
   #colListe { min-width: 0; }
   dialog { width: 100vw; max-height: 100vh; height: 100%; border-radius: 0; }
+  .notiz-panel { left: 16px; right: 16px; width: auto; }
 }
 </style>
 </head>
 <body>
 
-<header class="topbar">
+<header class="topbar" data-teil="Kopfzeile">
   <span class="brand">Feld</span>
   <nav role="tablist" aria-label="Bereiche" class="areas" id="tabs">
     <button role="tab" id="tab-verzeichnis" aria-controls="colListe" aria-selected="true" data-view="verzeichnis">Akteure</button>
@@ -529,16 +579,44 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
   <button class="icon-btn" id="btnSync" title="Sync nicht eingerichtet" aria-label="Sync-Status">
     <span class="sync-dot off" id="syncDot"></span>
   </button>
+  <button type="button" class="icon-btn" id="btnNotiz" aria-label="Notiz" aria-expanded="false" aria-controls="notizPanel" title="Notiz zur App: Fehler, Verbesserung, Idee – der Ort wird automatisch erfasst" data-notiz-ignore>
+    <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+  </button>
+  <!-- Notizpanel: nicht modal, die App bleibt bedienbar (E38). Im DOM direkt nach dem Stift, damit Tab dort weitergeht. -->
+  <section class="notiz-panel" id="notizPanel" aria-labelledby="notizTitle" data-notiz-ignore hidden>
+    <div class="notiz-head">
+      <h2 id="notizTitle">Notiz</h2>
+      <button type="button" class="dialog-close" id="notizClose" aria-label="Notiz schliessen">×</button>
+    </div>
+    <div class="notiz-ort">
+      <span class="notiz-ort-path"><span class="sr-only">Ort: </span><span id="notizOrt"></span></span>
+      <button type="button" class="btn-link" id="notizOrtNeu">Ort neu setzen</button>
+      <button type="button" class="btn-link" id="notizOrtOhne">ohne Ort</button>
+    </div>
+    <div class="notiz-arten" role="group" aria-label="Art" id="notizArten"></div>
+    <div>
+      <label class="field-label" for="notizText">Was ist dir aufgefallen?</label>
+      <textarea id="notizText" rows="4"></textarea>
+    </div>
+    <div class="notiz-foot">
+      <button type="button" class="btn btn-primary" id="notizSave">speichern</button>
+      <span class="notiz-kbd" id="notizKbd" aria-hidden="true"></span>
+      <span class="btn-spacer"></span>
+      <button type="button" class="btn btn-ghost" id="notizAlle">Alle Notizen ›</button>
+    </div>
+  </section>
   <button class="icon-btn" id="btnSettings" aria-label="Einstellungen">
     <svg viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
   </button>
 </header>
 
 <div id="liveRegion" class="sr-only" aria-live="polite" role="status"></div>
+<!-- sichtbarer Toast; vorgelesen wird über die Live-Region (announce) -->
+<div class="toast" id="toast" aria-hidden="true" hidden></div>
 
 <div class="columns" id="columns">
 
-  <aside class="col" id="colKnoten" aria-labelledby="knotenTitle">
+  <aside class="col" id="colKnoten" aria-labelledby="knotenTitle" data-teil="Knotenpunkte">
     <button type="button" class="col-rail" id="knotenRail" aria-expanded="false" aria-controls="knotenContent">
       <svg class="icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       <span class="col-rail-label">Knotenpunkte<span class="sr-only"> ausklappen</span></span>
@@ -559,7 +637,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 
   <div class="resizer" id="resizeKnoten" role="separator" aria-orientation="vertical" aria-label="Breite der Knotenpunkte" aria-controls="colKnoten" aria-describedby="resizeHint" tabindex="0" title="Ziehen: Breite · ganz einziehen oder Doppelklick: einklappen"></div>
 
-  <main class="col" id="colListe" role="tabpanel" aria-labelledby="listTitle">
+  <main class="col" id="colListe" role="tabpanel" aria-labelledby="listTitle" data-teil="Liste">
     <div class="list-head">
       <div class="list-head-row">
         <button type="button" class="btn btn-ghost only-narrow" id="knotenOpenNarrow">Knotenpunkte</button>
@@ -576,7 +654,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 
   <div class="resizer" id="resizeKartei" role="separator" aria-orientation="vertical" aria-label="Breite der Kartei" aria-controls="colKartei" aria-describedby="resizeHint" tabindex="0" title="Ziehen: Breite · ganz einziehen oder Doppelklick: einklappen"></div>
 
-  <aside class="col" id="colKartei" aria-label="Kartei">
+  <aside class="col" id="colKartei" aria-label="Kartei" data-teil="Kartei">
     <button type="button" class="col-rail" id="karteiRail" aria-expanded="false" aria-controls="karteiContent">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       <span class="col-rail-label">Kartei<span class="sr-only"> ausklappen</span></span>
@@ -599,7 +677,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
 <p id="resizeHint" hidden>Pfeiltasten ändern die Breite, Enter klappt ein oder aus.</p>
 
 <!-- Knotenpunkt bearbeiten -->
-<dialog id="knotenDialog" aria-labelledby="kdTitle">
+<dialog id="knotenDialog" aria-labelledby="kdTitle" data-teil="Knotenpunkt bearbeiten">
   <form id="kdForm" style="display:contents">
     <div class="dialog-head">
       <div class="dialog-head-main">
@@ -607,7 +685,7 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
         <h2 class="dialog-title" id="kdTitle"></h2>
         <div class="kd-usage" id="kdUsage"></div>
       </div>
-      <button type="button" class="dialog-close" id="kdClose" aria-label="Schliessen">×</button>
+      <button type="button" class="dialog-close" id="kdClose" aria-label="Schliessen" data-notiz-ignore>×</button>
     </div>
     <div class="dialog-body">
       <section class="kd-sec" aria-labelledby="kdH1">
@@ -644,17 +722,17 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
     </div>
     <div class="dialog-foot">
       <span class="kd-preview" id="kdPreview" aria-live="polite"></span>
-      <button type="button" class="btn btn-ghost" id="kdCancel">Abbrechen</button>
+      <button type="button" class="btn btn-ghost" id="kdCancel" data-notiz-ignore>Abbrechen</button>
       <button type="submit" class="btn btn-primary" id="kdApply">Anwenden</button>
     </div>
   </form>
 </dialog>
 
 <!-- Einstellungen-Dialog -->
-<dialog id="settingsDialog" aria-labelledby="settingsTitle">
+<dialog id="settingsDialog" aria-labelledby="settingsTitle" data-teil="Einstellungen">
   <div class="dialog-head">
     <div class="dialog-head-main"><h2 class="dialog-title" id="settingsTitle">Einstellungen</h2></div>
-    <button class="dialog-close" id="settingsClose" aria-label="Schliessen">×</button>
+    <button class="dialog-close" id="settingsClose" aria-label="Schliessen" data-notiz-ignore>×</button>
   </div>
   <div class="dialog-body">
 
@@ -713,6 +791,28 @@ dialog::backdrop { background: transparent; }  /* bewusst ohne Abdunkelung */
   </div>
 </dialog>
 
+<!-- Alle Notizen (E38) -->
+<dialog id="notizenDialog" aria-labelledby="nzTitle" data-notiz-ignore>
+  <div class="dialog-head">
+    <div class="dialog-head-main">
+      <div class="dialog-eyebrow">Rückmeldungen zur App</div>
+      <h2 class="dialog-title" id="nzTitle">Notizen</h2>
+      <div class="kd-usage" id="nzCount"></div>
+    </div>
+    <button type="button" class="dialog-close" id="nzClose" aria-label="Schliessen">×</button>
+  </div>
+  <div class="dialog-body" id="nzBody"></div>
+  <div class="dialog-foot">
+    <div class="nz-filter" role="group" aria-label="Anzeigen">
+      <button type="button" class="toggle" data-nzfilter="offen">offen</button>
+      <button type="button" class="toggle" data-nzfilter="alle">alle</button>
+    </div>
+    <span class="btn-spacer"></span>
+    <button type="button" class="btn btn-ghost" id="nzNeu">+ Notiz</button>
+    <button type="button" class="btn btn-primary" id="nzCopy">als Text kopieren</button>
+  </div>
+</dialog>
+
 <script>
 'use strict';
 
@@ -732,7 +832,7 @@ const EIGENE_IDS = ['vspw', 'lokal']; // eigene Organisationen, siehe KONZEPT 5.
 const KURZNOTIZ_MAXLEN = 100;
 const IDEEN_SORT_KEY = 'feld_ideen_sort_v1';
 
-let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, ideenOrdner: {}, themenVokabular: THEMEN_KERN.slice(), ich: '' };
+let DATA = { akteure: {}, veranstaltungen: {}, ideen: {}, ideenOrdner: {}, notizen: {}, themenVokabular: THEMEN_KERN.slice(), ich: '' };
 let syncConfig = null;
 let remoteSha = null;
 let syncInFlight = false;
@@ -836,6 +936,7 @@ function loadLocal() {
       DATA.veranstaltungen = parsed.veranstaltungen || {};
       DATA.ideen = parsed.ideen || {};
       DATA.ideenOrdner = parsed.ideenOrdner || {};
+      DATA.notizen = parsed.notizen || {};
       DATA.themenVokabular = (Array.isArray(parsed.themenVokabular) && parsed.themenVokabular.length)
         ? parsed.themenVokabular : THEMEN_KERN.slice();
       DATA.ich = parsed.ich || '';
@@ -860,6 +961,7 @@ function saveLocal() {
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
     ideenOrdner: DATA.ideenOrdner,
+    notizen: DATA.notizen,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -2854,7 +2956,7 @@ function mergeCollectionInto(type, incoming) {
 
 function mergeIncomingPayload(payload) {
   const stats = { added: 0, updated: 0 };
-  ['akteure', 'veranstaltungen', 'ideen', 'ideenOrdner'].forEach(type => {
+  ['akteure', 'veranstaltungen', 'ideen', 'ideenOrdner', 'notizen'].forEach(type => {
     const r = mergeCollectionInto(type, payload[type]);
     stats.added += r.added; stats.updated += r.updated;
   });
@@ -2877,6 +2979,7 @@ function currentPayload() {
     veranstaltungen: DATA.veranstaltungen,
     ideen: DATA.ideen,
     ideenOrdner: DATA.ideenOrdner,
+    notizen: DATA.notizen,
   };
 }
 
@@ -2982,6 +3085,13 @@ function downloadTemplate() {
         erstellt: 'YYYY-MM-DD', modified: 'ISO-Zeitstempel, optional',
       },
     },
+    notizen: {
+      'beispiel-id': {
+        datum: 'ISO-Zeitstempel', art: 'Fehler | Verbesserung | Idee', text: 'Rückmeldung zur App',
+        ort: { bereich: 'Akteure', ansicht: 'Knotenpunkt-Auswahl', label: 'Titel des Eintrags', id: 'eintrag-id', teil: 'Kartei', detail: 'Kurznotiz' },
+        erledigt: false, modified: 'ISO-Zeitstempel, optional',
+      },
+    },
   };
   downloadJSON('feld-import-vorlage.json', tpl);
 }
@@ -2992,7 +3102,7 @@ function importFile(file) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(reader.result);
-      if (!payload || typeof payload !== 'object' || (!payload.akteure && !payload.veranstaltungen && !payload.ideen)) {
+      if (!payload || typeof payload !== 'object' || (!payload.akteure && !payload.veranstaltungen && !payload.ideen && !payload.notizen)) {
         throw new Error('Datei enthält keine erkennbaren Feld-Daten (akteure/veranstaltungen/ideen).');
       }
       const stats = mergeIncomingPayload(payload);
@@ -3008,6 +3118,409 @@ function importFile(file) {
   reader.readAsText(file);
 }
 
+
+/* =========================================================================
+   Notizen zur App (E38) – nach dem Vorbild von Kommunikation v2 (P-016)
+   Rückmeldungen beim Benutzen (Fehler · Verbesserung · Idee). Der Ort wird beim Öffnen
+   erfasst: Bereich › Ansicht › Datensatz › Teil › Detail.
+   - Ansicht = Knotenpunkt-Auswahl (Feld hat keine Unteransichten)
+   - Teil = zuletzt angeklickte oder fokussierte Region mit data-teil
+   - Detail = Feld, Abschnitt oder Bedienelement innerhalb des Teils, aus dem DOM abgeleitet
+   Eigene Collection `notizen` mit Store, Tombstones und Sync wie die übrigen Daten.
+   ========================================================================= */
+const NOTIZ_ARTEN = ['Fehler', 'Verbesserung', 'Idee'];
+const TEIL_REIHE = ['Kopfzeile', 'Knotenpunkte', 'Liste', 'Kartei', 'Knotenpunkt bearbeiten', 'Einstellungen'];
+const NOTIZ_ART_KEY = 'feld_notiz_art_v1';
+const NOTIZ_ENTWURF_KEY = 'feld_notiz_entwurf_v1';
+const NOTIZ_FILTER_KEY = 'feld_notiz_filter_v1';
+let notizArt = 'Verbesserung';
+let notizOrt = null;                       // Ort des Entwurfs; null = «Allgemein»
+let notizFilter = 'offen';                 // offen | alle
+let lastTeil = { teil: '', detail: '' };   // zuletzt angeklickter/fokussierter Teil
+
+/* ---------- Toast: sichtbar (aria-hidden), vorgelesen über die Live-Region ---------- */
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast');
+  // in einem offenen modalen Dialog anzeigen, sonst läge der Toast hinter der obersten Ebene
+  const host = document.querySelector('dialog[open]') || document.body;
+  if (t.parentNode !== host) host.appendChild(t);
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  announce(msg);
+}
+
+/* ---------- Ort erfassen ---------- */
+function cleanLabel(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim()
+    .replace(/\s*\(\d+\)$/, '')        // «Akteure (3)»
+    .replace(/^\d+\s*·\s*/, '')        // «3 · Zusammenführen»
+    .replace(/\s*[›…↗]+$/, '');
+}
+
+function controlName(c) {
+  if (c.id === 'searchInput') return 'Suche';
+  if (c.classList.contains('mini-select')) {
+    const sr = c.querySelector('.sr-only');
+    if (sr) return cleanLabel(sr.textContent.replace(/:\s*$/, ''));
+  }
+  if (c.tagName === 'INPUT' && c.labels && c.labels[0]) return cleanLabel(c.labels[0].textContent);
+  return cleanLabel(c.getAttribute('aria-label') || c.textContent);
+}
+
+function detailOf(el, teil) {
+  if (teil === 'Kartei') {
+    if (el.closest('#karteiTitle')) return 'Titel';
+    const g = el.closest('.kf, .field-group');
+    const l = g && g.querySelector('.field-label');
+    if (l) return cleanLabel(l.textContent);
+    const b = el.closest('#karteiFoot button');
+    return b ? cleanLabel(b.textContent) : '';
+  }
+  if (teil === 'Einstellungen' || teil === 'Knotenpunkt bearbeiten') {
+    const s = el.closest('.settings-section, .kd-sec');
+    const h = s && s.querySelector('h3');
+    const sec = h ? cleanLabel(h.textContent) : '';
+    return teil === 'Knotenpunkt bearbeiten' ? [kdKnoten, sec].filter(Boolean).join(' · ') : sec;
+  }
+  if (teil === 'Knotenpunkte') {
+    const k = el.closest('[data-knoten]');
+    if (k) return k.dataset.knoten;
+    if (el.closest('[data-alle]')) return 'Alle';
+  }
+  if (teil === 'Liste' && el.closest('#entryList')) return '';   // der Eintrag selbst ist der Datensatz
+  const c = el.closest('button, input, a');
+  return c ? controlName(c) : '';
+}
+
+function trackTeil(e) {
+  const t = e.target;
+  if (!t || !t.closest || t.closest('[data-notiz-ignore]')) return;
+  if (e.type === 'focusin') {
+    // Nur echte Fokuswechsel zählen. Nicht: Fokus nach Neuzeichnen (kein relatedTarget) oder
+    // Fokus, den ein schliessender Dialog an seinen Auslöser zurückgibt.
+    const rt = e.relatedTarget;
+    if (!rt || !rt.closest) return;
+    const d = rt.closest('dialog');
+    if (d && !d.open) return;
+  }
+  const region = t.closest('[data-teil]');
+  if (!region) return;
+  lastTeil = { teil: region.dataset.teil, detail: detailOf(t, region.dataset.teil) };
+}
+
+function captureOrt() {
+  const sel = currentSelection();
+  const item = sel ? Store.get(sel.type, sel.id) : null;
+  return {
+    bereich: AREA_LABEL[currentView],
+    ansicht: Array.from(selectedKnoten).join(' + '),
+    label: item ? (titleOf(sel.type, item) || '(ohne Titel)') : '',
+    id: sel ? sel.id : '',
+    teil: lastTeil.teil,
+    detail: lastTeil.detail,
+  };
+}
+
+function ortPfad(o) {
+  const p = o ? [o.bereich, o.ansicht, o.label, o.teil, o.detail].filter(Boolean) : [];
+  return p.length ? p.join(' › ') : 'Allgemein';
+}
+
+// Gruppe in «Alle Notizen» und im Text: Bereich › Teil
+function ortGruppe(o) {
+  return o && o.bereich ? [o.bereich, o.teil].filter(Boolean).join(' › ') : 'Allgemein';
+}
+function gruppenRang(o) {
+  const b = o && o.bereich ? AREAS.findIndex(a => AREA_LABEL[a] === o.bereich) : -1;
+  const t = o && o.teil ? TEIL_REIHE.indexOf(o.teil) : -1;
+  return [b < 0 ? AREAS.length : b, t];   // Allgemein zuletzt; ohne Teil vor den Teilen
+}
+
+function fmtNotizDatum(iso, withTime) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  const s = `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+  return withTime ? `${s}, ${p(d.getHours())}:${p(d.getMinutes())}` : s;
+}
+
+/* ---------- Panel ---------- */
+function saveNotizEntwurf() {
+  try {
+    const text = $('notizText').value;
+    if (text.trim()) localStorage.setItem(NOTIZ_ENTWURF_KEY, JSON.stringify({ text, ort: notizOrt }));
+    else localStorage.removeItem(NOTIZ_ENTWURF_KEY);
+  } catch (e) {}
+}
+
+function renderNotizOrt() { $('notizOrt').textContent = ortPfad(notizOrt); }
+
+function renderNotizArten() {
+  $('notizArten').innerHTML = NOTIZ_ARTEN.map(a =>
+    `<button type="button" class="toggle" data-art="${a}" aria-pressed="${a === notizArt}">${a}</button>`).join('');
+}
+
+function placeNotizPanel() {
+  const top = document.querySelector('.topbar').getBoundingClientRect().bottom;
+  $('notizPanel').style.top = Math.round(top + 8) + 'px';
+}
+
+function notizPanelOpen() { return !$('notizPanel').hidden; }
+
+function openNotizPanel() {
+  const text = $('notizText');
+  if (!text.value.trim()) notizOrt = captureOrt();   // der Ort wird nur bei leerem Entwurf neu erfasst
+  renderNotizOrt();
+  renderNotizArten();
+  placeNotizPanel();
+  $('notizPanel').hidden = false;
+  $('btnNotiz').setAttribute('aria-expanded', 'true');
+  text.focus();
+  text.selectionStart = text.selectionEnd = text.value.length;
+}
+
+function closeNotizPanel(returnFocus) {
+  if (!notizPanelOpen()) return;
+  saveNotizEntwurf();
+  $('notizPanel').hidden = true;
+  $('btnNotiz').setAttribute('aria-expanded', 'false');
+  if (returnFocus) $('btnNotiz').focus();
+}
+
+function saveNotiz() {
+  const text = $('notizText').value.trim();
+  if (!text) { showToast('Notiz ist leer, nichts gespeichert'); $('notizText').focus(); return; }
+  const id = 'notiz-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+  Store.put('notizen', id, { datum: nowISO(), art: notizArt, text, ort: notizOrt ? { ...notizOrt } : null, erledigt: false });
+  $('notizText').value = '';
+  notizOrt = null;
+  saveNotizEntwurf();
+  closeNotizPanel(true);
+  if ($('notizenDialog').open) renderNotizen();
+  showToast('Notiz gespeichert');
+}
+
+/* ---------- Dialog «Alle Notizen» ---------- */
+function notizenSortiert(list) {
+  return list.slice().sort((a, b) => {
+    const [ba, ta] = gruppenRang(a.ort), [bb, tb] = gruppenRang(b.ort);
+    return ba - bb || ta - tb || cmpDe(ortGruppe(a.ort), ortGruppe(b.ort)) || (a.datum || '').localeCompare(b.datum || '');
+  });
+}
+
+function notizenGruppiert(list) {
+  const out = [];
+  notizenSortiert(list).forEach(n => {
+    const g = ortGruppe(n.ort);
+    if (!out.length || out[out.length - 1][0] !== g) out.push([g, []]);
+    out[out.length - 1][1].push(n);
+  });
+  return out;
+}
+
+function renderNotizen(focus) {
+  const alle = Store.list('notizen');
+  const offen = alle.filter(n => !n.erledigt);
+  const list = notizFilter === 'offen' ? offen : alle;
+  $('nzCount').textContent = `${offen.length} offen · ${alle.length} insgesamt`;
+  document.querySelectorAll('[data-nzfilter]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.nzfilter === notizFilter)));
+  const body = $('nzBody');
+  if (!list.length) {
+    body.innerHTML = `<p class="nz-empty">${alle.length ? 'Keine offenen Notizen.' : 'Noch keine Notizen. Der Stift oben rechts hält eine fest.'}</p>`;
+  } else {
+    body.innerHTML = notizenGruppiert(list).map(([g, arr], gi) => `
+      <section class="nz-group" aria-labelledby="nz-g-${gi}">
+        <h3 id="nz-g-${gi}">${escapeHtml(g)}</h3>
+        <ul class="nz-list">${arr.map(n => {
+          const tid = 'nz-t-' + escapeHtml(n.id);
+          const kannHin = n.ort && AREAS.some(a => AREA_LABEL[a] === n.ort.bereich);
+          return `<li class="nz-item${n.erledigt ? ' is-done' : ''}" data-id="${escapeHtml(n.id)}">
+            <div class="nz-main">
+              <div class="nz-top"><span class="nz-art">${escapeHtml(n.art)}</span><span>${escapeHtml(fmtNotizDatum(n.datum, true))}</span></div>
+              <div class="nz-text" id="${tid}">${escapeHtml(n.text)}</div>
+              <div class="nz-ort"><span class="sr-only">Ort: </span>${escapeHtml(ortPfad(n.ort))}</div>
+            </div>
+            <div class="nz-actions">
+              <label class="nz-done"><input type="checkbox" data-nz="erledigt" ${n.erledigt ? 'checked' : ''} aria-describedby="${tid}">erledigt</label>
+              ${kannHin ? `<button type="button" class="btn btn-ghost" data-nz="goto" aria-describedby="${tid}">zur Stelle</button>` : ''}
+              <button type="button" class="btn btn-danger" data-nz="del" aria-describedby="${tid}">Löschen</button>
+            </div>
+          </li>`;
+        }).join('')}</ul>
+      </section>`).join('');
+    wireNotizItems(body);
+  }
+  if (focus) {
+    const el = typeof focus === 'string' ? $('notizenDialog').querySelector(focus) : focus;
+    (el || $('nzCopy')).focus();
+  }
+}
+
+// Nach dem Neuzeichnen: Fokus auf dieselbe Notiz, sonst auf die nächste in der Liste
+function focusAfterNotiz(id, idx, sel) {
+  const items = Array.from(document.querySelectorAll('#nzBody .nz-item'));
+  const same = items.find(li => li.dataset.id === id);
+  const target = same || items[Math.min(idx, items.length - 1)];
+  return target ? target.querySelector(sel) || target.querySelector('[data-nz="erledigt"]') : null;
+}
+
+function wireNotizItems(body) {
+  body.querySelectorAll('.nz-item').forEach((li, idx) => {
+    const id = li.dataset.id;
+    li.querySelector('[data-nz="erledigt"]').addEventListener('change', e => {
+      Store.put('notizen', id, { erledigt: e.target.checked });
+      renderNotizen();
+      announce(e.target.checked ? 'Als erledigt markiert' : 'Wieder offen');
+      const f = focusAfterNotiz(id, idx, '[data-nz="erledigt"]');
+      (f || $('nzCopy')).focus();
+    });
+    const go = li.querySelector('[data-nz="goto"]');
+    if (go) go.addEventListener('click', () => gotoNotizOrt(id));
+    const del = li.querySelector('[data-nz="del"]');
+    attachDeleteButton(del, 'notizen', id, () => {
+      renderNotizen();
+      announce('Notiz gelöscht');
+      const f = focusAfterNotiz(null, idx, '[data-nz="erledigt"]');
+      (f || $('nzCopy')).focus();
+    });
+    del.addEventListener('click', () => { if (del.classList.contains('confirming')) announce('Zum Bestätigen nochmals «Löschen» wählen'); });
+  });
+}
+
+function openNotizenDialog() {
+  closeNotizPanel(false);
+  renderNotizen();
+  $('notizenDialog').showModal();
+  const first = $('nzBody').querySelector('[data-nz="erledigt"]');
+  (first || $('nzCopy')).focus();
+}
+
+function closeNotizenDialog(focusPen) {
+  if ($('notizenDialog').open) $('notizenDialog').close();
+  if (focusPen) $('btnNotiz').focus();
+}
+
+// «zur Stelle»: Bereich, Ansicht (Knotenpunkt-Auswahl) und Datensatz wiederherstellen
+function gotoNotizOrt(id) {
+  const n = Store.get('notizen', id);
+  const o = n && n.ort;
+  const area = o && AREAS.find(a => AREA_LABEL[a] === o.bereich);
+  if (!area) return;
+  closeNotizenDialog(false);
+  discardEmptyDraft();
+  const kn = String(o.ansicht || '').split(' + ').map(s => s.trim()).filter(k => k && DATA.themenVokabular.includes(k));
+  selectedKnoten = new Set(kn);
+  const type = TAB_TYPE[area];
+  if (o.id && Store.get(type, o.id)) {
+    if (layout.karteiCollapsed && !window.matchMedia('(max-width: 860px)').matches) setCollapsed('kartei', false);
+    selected[area] = o.id;
+    if (area !== currentView) switchView(area);
+    else { renderKnoten(); renderListe(); }
+    selectEntry(type, o.id, { focusKartei: true });
+  } else {
+    if (area !== currentView) switchView(area, { focus: true });
+    else { renderKnoten(); renderListe(); renderKartei(); $('tab-' + area).focus(); }
+    if (o.id) showToast(`${TYPE_LABEL[type]} «${o.label}» gibt es nicht mehr`);
+  }
+}
+
+/* ---------- Als Text kopieren (nur offene) ---------- */
+function notizenMarkdown() {
+  const offen = Store.list('notizen').filter(n => !n.erledigt);
+  const lines = [`# Notizen Feld – ${fmtNotizDatum(nowISO())}`];
+  notizenGruppiert(offen).forEach(([g, arr]) => {
+    lines.push('', `## ${g}`, '');
+    arr.forEach(n => {
+      const text = String(n.text || '').trim().replace(/\s*\n\s*/g, ' / ');
+      lines.push(`- [${n.art}] ${text} (${ortPfad(n.ort)}, ${fmtNotizDatum(n.datum)})`);
+    });
+  });
+  return { text: lines.join('\n') + '\n', n: offen.length };
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch (e) {}
+  // Rückfall: im offenen Dialog, sonst wäre das Feld inert
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+  (document.querySelector('dialog[open]') || document.body).appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+  return ok;
+}
+
+async function copyNotizen() {
+  const { text, n } = notizenMarkdown();
+  if (!n) { showToast('Keine offenen Notizen zum Kopieren'); return; }
+  const ok = await copyText(text);
+  $('nzCopy').focus();
+  showToast(ok ? `${n} ${pluralize(n, ['offene Notiz', 'offene Notizen'])} kopiert` : 'Kopieren nicht möglich');
+}
+
+function wireNotizen() {
+  try {
+    const a = localStorage.getItem(NOTIZ_ART_KEY);
+    if (NOTIZ_ARTEN.includes(a)) notizArt = a;
+    const f = localStorage.getItem(NOTIZ_FILTER_KEY);
+    if (f === 'offen' || f === 'alle') notizFilter = f;
+    const d = JSON.parse(localStorage.getItem(NOTIZ_ENTWURF_KEY) || 'null');
+    if (d && d.text) { $('notizText').value = d.text; notizOrt = d.ort || null; }
+  } catch (e) {}
+
+  document.addEventListener('pointerdown', trackTeil, true);
+  document.addEventListener('focusin', trackTeil, true);
+
+  $('notizKbd').textContent = IS_MAC ? '⌘↵' : 'Strg+↵';
+  $('notizSave').setAttribute('aria-keyshortcuts', 'Meta+Enter Control+Enter');
+  $('btnNotiz').addEventListener('click', () => { if (notizPanelOpen()) closeNotizPanel(true); else openNotizPanel(); });
+  $('notizClose').addEventListener('click', () => closeNotizPanel(true));
+  $('notizSave').addEventListener('click', saveNotiz);
+  $('notizAlle').addEventListener('click', openNotizenDialog);
+  $('notizOrtNeu').addEventListener('click', () => {
+    notizOrt = captureOrt(); renderNotizOrt(); saveNotizEntwurf();
+    announce('Ort: ' + ortPfad(notizOrt));
+    $('notizText').focus();
+  });
+  $('notizOrtOhne').addEventListener('click', () => {
+    notizOrt = null; renderNotizOrt(); saveNotizEntwurf();
+    announce('Ort: Allgemein');
+    $('notizText').focus();
+  });
+  $('notizArten').addEventListener('click', e => {
+    const b = e.target.closest('[data-art]');
+    if (!b) return;
+    notizArt = b.dataset.art;
+    try { localStorage.setItem(NOTIZ_ART_KEY, notizArt); } catch (err) {}
+    renderNotizArten();
+    $('notizArten').querySelector(`[data-art="${notizArt}"]`).focus();
+  });
+  $('notizText').addEventListener('input', saveNotizEntwurf);   // klein genug, um bei jeder Eingabe zu speichern
+  window.addEventListener('pagehide', saveNotizEntwurf);
+  $('notizPanel').addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeNotizPanel(true); }
+    else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); saveNotiz(); }
+  });
+  window.addEventListener('resize', debounce(() => { if (notizPanelOpen()) placeNotizPanel(); }, 150));
+
+  $('nzClose').addEventListener('click', () => closeNotizenDialog(true));
+  $('notizenDialog').addEventListener('cancel', e => { e.preventDefault(); closeNotizenDialog(true); });
+  $('nzCopy').addEventListener('click', copyNotizen);
+  $('nzNeu').addEventListener('click', () => { closeNotizenDialog(false); openNotizPanel(); });
+  document.querySelectorAll('[data-nzfilter]').forEach(b => b.addEventListener('click', () => {
+    notizFilter = b.dataset.nzfilter;
+    try { localStorage.setItem(NOTIZ_FILTER_KEY, notizFilter); } catch (e) {}
+    renderNotizen(`[data-nzfilter="${notizFilter}"]`);
+  }));
+}
 
 /* =========================================================================
    Init / Event-Verdrahtung
@@ -3156,7 +3669,7 @@ function wireSettings() {
 }
 
 function anyDialogOpen() {
-  return ['settingsDialog', 'knotenDialog'].some(id => $(id).open);
+  return ['settingsDialog', 'knotenDialog', 'notizenDialog'].some(id => $(id).open);
 }
 
 function wireKeyboard() {
@@ -3185,6 +3698,7 @@ function wireKeyboard() {
     }
     if (e.key === 'Escape' && !anyDialogOpen()) {
       if (openMenuState) return; // Menü behandelt Esc selbst
+      if (notizPanelOpen()) { closeNotizPanel(false); return; }   // Esc im Panel selbst: Fokus zurück zum Stift (wireNotizen)
       if (document.body.classList.contains('knoten-open')) { $('knotenCloseNarrow').click(); return; }
       if (document.body.classList.contains('kartei-open') && window.matchMedia('(max-width: 860px)').matches) { $('karteiCloseNarrow').click(); }
     }
@@ -3212,6 +3726,7 @@ function init() {
   wireDialogs();
   wireSettings();
   wireKeyboard();
+  wireNotizen();
   applyLayout();
   window.addEventListener('resize', debounce(applyLayout, 150));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(applyLayout);   // Public Sans verändert die Kopfzeilenbreite
