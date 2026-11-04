@@ -291,6 +291,8 @@ body.is-resizing { cursor: col-resize; user-select: none; }
 .kf-labelrow { display: flex; align-items: baseline; gap: 8px; }
 .kf-labelrow .field-label { flex: 1; }
 .kf-count, .kf-open { font-size: 12px; color: var(--muted); }
+.kf-hint { grid-column: 1 / -1; margin: -6px 0 14px; font-size: 12px; color: var(--muted); }
+.kf input[aria-invalid="true"] { border-color: var(--danger, #c0392b); }
 .kf-open { color: var(--accent); text-decoration: none; }
 .kf-open:hover { text-decoration: underline; }
 .kf input[type="text"], .kf input[type="date"], .kf textarea, .kf select, .rel-extra {
@@ -895,12 +897,45 @@ function todayISO() {
 
 function nowISO() { return new Date().toISOString(); }
 
+// Datum auch unvollständig (E40): gespeichert als JJJJ-MM-TT, JJJJ-MM oder JJJJ
 function formatDate(iso) {
   if (!iso) return '';
-  const [y, m, d] = iso.split('-');
+  const [y, m, d] = String(iso).split('-');
+  if (/^\d{4}$/.test(y) && !m) return y;
+  if (/^\d{4}$/.test(y) && m && !d) return `${m}.${y}`;
   if (!y || !m || !d) return iso;
   return `${d}.${m}.${y}`;
 }
+
+// Eingabe → ISO (ganz oder teilweise). '' = leer, null = ungültig.
+// Akzeptiert TT.MM.JJJJ, MM.JJJJ, JJJJ, ISO; 00 für unbekannten Tag oder Monat.
+function parseDateInput(raw) {
+  const t = String(raw || '').trim().replace(/\s+/g, '');
+  if (!t) return '';
+  let y, m = 0, d = 0, mm;
+  if ((mm = t.match(/^(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?$/))) { y = +mm[1]; m = +(mm[2] || 0); d = +(mm[3] || 0); }
+  else if ((mm = t.match(/^(?:(\d{1,2})[./])?(?:(\d{1,2})[./])?(\d{4})$/))) {
+    y = +mm[3];
+    if (mm[1] != null && mm[2] != null) { d = +mm[1]; m = +mm[2]; }
+    else if (mm[1] != null) m = +mm[1];
+  } else return null;
+  if (m > 12 || (!m && d)) return null;
+  const p = n => String(n).padStart(2, '0');
+  if (!m) return String(y);
+  if (!d) return `${y}-${p(m)}`;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCMonth() !== m - 1) return null;
+  return `${y}-${p(m)}-${p(d)}`;
+}
+
+// Letzter möglicher Tag eines (Teil-)Datums, für anstehend/vergangen
+function dateEnd(iso) {
+  const [y, m, d] = String(iso || '').split('-');
+  if (d) return iso;
+  if (m) return `${y}-${m}-${p2(new Date(Date.UTC(+y, +m, 0)).getUTCDate())}`;
+  return `${y}-12-31`;
+}
+function p2(n) { return String(n).padStart(2, '0'); }
 
 function formatDateRange(datum, bis) {
   if (bis && bis !== datum) return `${formatDate(datum)}–${formatDate(bis)}`;
@@ -1058,7 +1093,7 @@ function verbundeneOf(id, type = 'akteure') {
 function veranstaltungStatus(v) {
   const massgebend = v.bis || v.datum;
   if (!massgebend) return 'ohne';   // Projekte ohne Datum sind erlaubt
-  return massgebend >= todayISO() ? 'anstehend' : 'vergangen';
+  return dateEnd(massgebend) >= todayISO() ? 'anstehend' : 'vergangen';
 }
 
 function akteurName(id) {
@@ -1181,11 +1216,11 @@ function getSearchWords() {
 
 function haystackFor(type, item) {
   if (type === 'akteure') {
-    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.kurznotiz, item.notiz, item.web, ...verbundeneOf(item.id).map(x => akteurName(x.id))];
+    return [item.name, item.art, item.ort, (item.themen || []).join(' '), item.kurznotiz, item.notiz, ...(item.links || []), ...verbundeneOf(item.id).map(x => akteurName(x.id))];
   }
   if (type === 'veranstaltungen') {
     const beteiligteNamen = (item.beteiligte || []).map(b => akteurName(b.id));
-    return [item.titel, item.kurznotiz, item.ort, item.format, item.reihe, item.beschrieb, item.datum, item.bis, (item.themen || []).join(' '), ...(item.links || []), ...beteiligteNamen];
+    return [item.titel, item.kurznotiz, item.ort, item.format, item.reihe, item.beschrieb, formatDate(item.datum), formatDate(item.bis), (item.themen || []).join(' '), ...(item.links || []), ...beteiligteNamen];
   }
   if (type === 'ideen') {
     const namen = (item.akteure || []).map(a => akteurName(a.id));
@@ -1341,6 +1376,26 @@ function migrateE28() {
     if (move) a.verbunden = [...(a.verbunden || []), { id: a.zu, wie: '' }];
     delete a.zu;
     if (move) touch(a); else changed = true;
+  });
+  // E39: Akteur-Feld «Web» → erster Eintrag in «Links»
+  Object.values(DATA.akteure).forEach(a => {
+    if (a.deleted || !('web' in a)) return;
+    const w = String(a.web || '').trim();
+    const links = Array.isArray(a.links) ? a.links : [];
+    if (w && !links.includes(w)) a.links = [w, ...links]; else a.links = links;
+    delete a.web;
+    touch(a);
+  });
+  // E40: Teildaten vereinheitlichen (z. B. 2015-04-00 oder 00.04.2015 → 2015-04)
+  Object.values(DATA.veranstaltungen).forEach(v => {
+    if (v.deleted) return;
+    let t = false;
+    ['datum', 'bis'].forEach(f => {
+      if (!v[f] || /^\d{4}(-\d{2}(-\d{2})?)?$/.test(v[f]) && !/-00/.test(v[f])) return;
+      const iso = parseDateInput(String(v[f]).replace(/-00(?=-|$)/g, '').replace(/^(\d{4})-00$/, '$1'));
+      if (iso !== null && iso !== v[f]) { v[f] = iso; t = true; }
+    });
+    if (t) touch(v);
   });
   if (changed) saveLocal();
   return changed;
@@ -2098,12 +2153,13 @@ function bindField(el, type, id, field, opts = {}) {
     if (!item) return;
     let v = read();
     if (opts.parse) v = opts.parse(v);
+    if (v === undefined) return;   // ungültig: nichts speichern
     const cur = item[field] ?? (el.type === 'checkbox' ? false : '');
     if (v === cur) return;
     patch(type, id, { [field]: v });
     if (opts.after) opts.after(v);
   };
-  if (el.type === 'checkbox' || el.tagName === 'SELECT' || el.type === 'date') {
+  if (el.type === 'checkbox' || el.tagName === 'SELECT' || el.type === 'date' || opts.commitOn === 'change') {
     el.addEventListener('change', commit);
   } else {
     el.addEventListener('input', debounce(commit, 400));
@@ -2148,7 +2204,24 @@ function refButton(type, id, label, sub) {
 }
 
 function webHref(web) { return /^https?:\/\//.test(web) ? web : `https://${web}`; }
-function shortUrl(u) { return String(u || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, ''); }
+const isMail = u => /^mailto:/i.test(u) || /^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(u);
+function linkHref(u) { return /^mailto:/i.test(u) ? u : isMail(u) ? `mailto:${u}` : webHref(u); }
+function shortUrl(u) { return String(u || '').replace(/^mailto:/i, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, ''); }
+const linkRows = item => (item.links || []).map((u, i) => ({ id: 'link-' + i, idx: i, href: linkHref(u), mail: isMail(u), label: shortUrl(u) }));
+
+// Links und Mailadressen, gemeinsam für Akteure und Projekte
+function wireLinks(host, type, id, rows) {
+  const links = () => (Store.get(type, id).links || []).slice();
+  wireRelEditor(host, 'links', {
+    rows, addLabel: 'Link oder Mail',
+    remove: r => { const l = links(); l.splice(r.idx, 1); patch(type, id, { links: l }); },
+    add: url => {
+      if (/\s/.test(url)) { announce('Ein Link darf keine Leerzeichen enthalten'); return false; }
+      if (!links().includes(url)) patch(type, id, { links: [...links(), url] });
+      return 'link';
+    },
+  });
+}
 
 /* ---------- «+ X»-Oval: Knopf, der beim Anklicken selbst zum Eingabefeld wird (E32) ----------
    Gleiche Form vor und nach dem Klick. Enter übernimmt, Esc bricht ab, Verlassen mit Text übernimmt. */
@@ -2209,7 +2282,9 @@ function relEditor(key, label, rows, o) {
     <div class="field-label" id="rel-${key}-label">${escapeHtml(label)} (${rows.length})</div>
     <ul class="rel-list" aria-labelledby="rel-${key}-label">${rows.map((r, i) => `
       <li class="rel-row${r.own ? ' is-own' : ''}" data-idx="${i}" data-id="${escapeHtml(r.id || '')}">
-        ${r.href
+        ${r.href && r.mail
+          ? `<a class="rel-link" href="${escapeHtml(r.href)}"><span class="sr-only">Mail an </span>${escapeHtml(r.label)} <span aria-hidden="true">✉</span></a>`
+          : r.href
           ? `<a class="rel-link" href="${escapeHtml(r.href)}" target="_blank" rel="noopener">${escapeHtml(r.label)}<span class="sr-only"> (neues Fenster)</span> ↗</a>`
           : `<button type="button" class="rel-link" data-ref-type="${r.type}" data-ref-id="${escapeHtml(r.id)}">${r.own ? '<span class="rel-own-mark" aria-hidden="true">◆</span>' : ''}${escapeHtml(r.label)}${r.sub ? `<span class="rel-sub">${escapeHtml(r.sub)}</span>` : ''}${r.own ? '<span class="sr-only">, eigenes Projekt</span>' : ''}</button>`}
         ${o.extraPlaceholder ? `<input type="text" class="rel-extra" data-idx="${i}" value="${escapeHtml(r.extra || '')}" placeholder="${escapeHtml(o.extraPlaceholder)}" ${o.extraList ? `list="${o.extraList}"` : ''} aria-label="${escapeHtml(o.extraPlaceholder)} – ${escapeHtml(r.label)}">` : ''}
@@ -2324,6 +2399,7 @@ function akteurRels(a) {
     projekte: b.veranstaltungen.map(x => ({ type: 'veranstaltungen', id: x.item.id, label: x.item.titel || '(ohne Titel)',
       sub: formatDateRange(x.item.datum, x.item.bis), extra: x.rolle, own: istEigen(x.item) })),
     ideen: b.ideen.map(x => ({ type: 'ideen', id: x.item.id, label: x.item.titel || '(ohne Titel)', extra: x.warum })),
+    links: linkRows(a),
   };
 }
 
@@ -2337,10 +2413,7 @@ function akteurBody(a) {
       <select id="kf-art" data-field="art">${['Person', 'Initiative', 'Institution'].map(x => `<option${x === a.art ? ' selected' : ''}>${x}</option>`).join('')}</select></div>
     ${kfText('Ort', 'ort', a.ort)}
   </div>`;
-  html += kfText('Web', 'web', a.web, {
-    placeholder: 'Adresse einfügen',
-    extra: a.web ? `<a class="kf-open" href="${escapeHtml(webHref(a.web))}" target="_blank" rel="noopener">öffnen<span class="sr-only"> (neues Fenster)</span> ↗</a>` : '',
-  });
+  html += relEditor('links', 'Links', rel.links, { addLabel: 'Link oder Mail' });
   html += knotenGroup();
   html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Verbindung', extraList: 'verbindungList' });
   html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt', extraPlaceholder: 'Rolle', extraList: 'roleList' });
@@ -2355,6 +2428,7 @@ function wireAkteurBody(host, a) {
 
   wireSameType(host, 'akteure', 'akteure', id, rel.akteure,
     { addLabel: 'Akteur', list: 'akteurNamesList', extraPlaceholder: 'Verbindung', resolve: resolveAkteur });
+  wireLinks(host, 'akteure', id, rel.links);
 
   // Projekte: dieser Akteur als Beteiligter
   const bet = vid => (Store.get('veranstaltungen', vid).beteiligte || []).slice();
@@ -2389,7 +2463,7 @@ function wireAkteurBody(host, a) {
 function projektRels(v) {
   return {
     akteure: (v.beteiligte || []).map(x => ({ type: 'akteure', id: x.id, label: akteurName(x.id) || '(gelöscht)', extra: x.rolle })),
-    links: (v.links || []).map((u, i) => ({ id: 'link-' + i, idx: i, href: webHref(u), label: shortUrl(u) })),
+    links: linkRows(v),
     projekte: sameTypeRows('veranstaltungen', v.id),
     ideen: veranstaltungBackrefs(v.id).ideen.map(i => ({ type: 'ideen', id: i.id, label: i.titel || '(ohne Titel)' })),
   };
@@ -2399,8 +2473,9 @@ function projektBody(v) {
   const rel = projektRels(v);
   let html = '';
   html += `<div class="kf-grid">
-    ${kfText('Datum', 'datum', v.datum, { type: 'date' })}
-    ${kfText('Bis', 'bis', v.bis, { type: 'date' })}
+    ${kfText('Datum', 'datum', formatDate(v.datum), { placeholder: 'TT.MM.JJJJ', describedby: 'kf-datum-hint' })}
+    ${kfText('Bis', 'bis', formatDate(v.bis), { placeholder: 'TT.MM.JJJJ', describedby: 'kf-datum-hint' })}
+    <p class="kf-hint kf-wide" id="kf-datum-hint">Auch nur Monat oder Jahr: 04.2015 oder 2015</p>
     ${kfText('Zeit', 'zeit', v.zeit, { placeholder: 'z. B. 19–20 Uhr' })}
     ${kfText('Ort', 'ort', v.ort)}
     ${kfText('Format', 'format', v.format, { list: 'formatList' })}
@@ -2408,7 +2483,7 @@ function projektBody(v) {
   </div>`;
   html += kurznotizField(v, 'Kurz, höchstens 100 Zeichen');
   html += kfText('Informationen', 'beschrieb', v.beschrieb, { multiline: true, rows: 3, placeholder: 'Weitere Informationen, ohne Längenbegrenzung' });
-  html += relEditor('links', 'Links', rel.links, { addLabel: 'Link' });
+  html += relEditor('links', 'Links', rel.links, { addLabel: 'Link oder Mail' });
   html += knotenGroup();
   html += relEditor('akteure', 'Akteure', rel.akteure, { addLabel: 'Akteur', extraPlaceholder: 'Rolle', extraList: 'roleList' });
   html += relEditor('projekte', 'Projekte', rel.projekte, { addLabel: 'Projekt' });
@@ -2418,9 +2493,19 @@ function projektBody(v) {
 
 function wireProjektBody(host, v) {
   const { id } = v;
-  host.querySelectorAll('[data-field]').forEach(el => bindField(el, 'veranstaltungen', id, el.dataset.field, {
-    after: ['datum', 'bis'].includes(el.dataset.field) ? () => { renderListe(); markSelectedRow(); } : undefined,
-  }));
+  host.querySelectorAll('[data-field]').forEach(el => {
+    const isDate = ['datum', 'bis'].includes(el.dataset.field);
+    bindField(el, 'veranstaltungen', id, el.dataset.field, isDate ? {
+      commitOn: 'change',
+      parse: v => {
+        const iso = parseDateInput(v);
+        el.setAttribute('aria-invalid', iso === null ? 'true' : 'false');
+        if (iso === null) { announce('Datum nicht erkannt. Möglich: 12.04.2015, 04.2015 oder 2015'); return undefined; }
+        return iso;
+      },
+      after: v => { el.value = formatDate(v); renderListe(); markSelectedRow(); },
+    } : undefined);
+  });
   const rel = projektRels(v);
   const cur = () => (Store.get('veranstaltungen', id).beteiligte || []).slice();
   wireRelEditor(host, 'akteure', {
@@ -2434,16 +2519,7 @@ function wireProjektBody(host, v) {
       return aid;
     },
   });
-  const links = () => (Store.get('veranstaltungen', id).links || []).slice();
-  wireRelEditor(host, 'links', {
-    rows: rel.links, addLabel: 'Link',
-    remove: r => { const l = links(); l.splice(r.idx, 1); patch('veranstaltungen', id, { links: l }); },
-    add: url => {
-      if (/\s/.test(url)) { announce('Ein Link darf keine Leerzeichen enthalten'); return false; }
-      if (!links().includes(url)) patch('veranstaltungen', id, { links: [...links(), url] });
-      return 'link';
-    },
-  });
+  wireLinks(host, 'veranstaltungen', id, rel.links);
   wireSameType(host, 'projekte', 'veranstaltungen', id, rel.projekte,
     { addLabel: 'Projekt', list: 'veranstaltungTitelList', resolve: resolveProjekt });
   const vs = iid => (Store.get('ideen', iid).veranstaltungen || []).slice();
@@ -3060,14 +3136,14 @@ function downloadTemplate() {
         name: 'Pflichtfeld: Name der Person/Initiative/Institution',
         art: 'Person | Initiative | Institution',
         verbunden: [{ id: 'akteur-id', wie: 'z. B. Mitglied; die Verbindung gilt in beide Richtungen' }],
-        ort: '', themen: ['Knotenpunkt'], web: '',
+        ort: '', themen: ['Knotenpunkt'], links: ['https://… oder name@beispiel.ch'],
         kurznotiz: `Kurznotiz, max. ${KURZNOTIZ_MAXLEN} Zeichen, erscheint in der Liste`, notiz: 'Informationen',
         quelle: '', modified: 'ISO-Zeitstempel, optional',
       },
     },
     veranstaltungen: {
       'beispiel-id': {
-        titel: 'Pflichtfeld', datum: 'YYYY-MM-DD, optional', bis: '', zeit: '', ort: '',
+        titel: 'Pflichtfeld', datum: 'JJJJ-MM-TT, JJJJ-MM oder JJJJ, optional', bis: '', zeit: '', ort: '',
         format: '', reihe: '', themen: ['Knotenpunkt'],
         beteiligte: [{ id: 'akteur-id', rolle: 'veranstaltend' }],
         links: ['https://…'],
